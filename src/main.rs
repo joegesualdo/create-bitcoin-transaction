@@ -11,7 +11,10 @@ use hex_utilities::{
     get_text_for_hex,
 };
 
-fn get_version() -> String {
+fn get_version(version: u8) -> String {
+    if version != 1 {
+        panic!("Version not supported")
+    }
     // currently version 1
     // https://en.bitcoin.it/wiki/Transaction
     let version = "00000001".to_string();
@@ -80,10 +83,8 @@ fn get_output_count(output_count: u64) -> String {
 
 fn get_output_amount(amount_in_btc: f64) -> String {
     let amount_in_sats = (amount_in_btc * 100000000.0) as u64;
-    println!("sats: {}", amount_in_sats);
     let amount_in_sats_hex = convert_decimal_to_hexadecimal(amount_in_sats, false, Some(8));
     let little_endian_amount_in_sats = convert_big_endian_hex_to_little_endian(&amount_in_sats_hex);
-    println!("sats le: {}", little_endian_amount_in_sats);
     little_endian_amount_in_sats
 }
 fn get_output_script_length() -> String {
@@ -97,15 +98,26 @@ fn get_lock_time() -> String {
     "00000000".to_string()
 }
 
-fn main() {
+struct PayFrom {
+    transaction: String,
+    vout_index: u64,
+}
+fn get_transaction(version: u8, pay_froms: Vec<PayFrom>) -> String {
+    let input_count = get_input_count(pay_froms.len() as u64);
+    let mut input_part = String::new();
+    input_part.push_str(&input_count);
+    for pay_from in pay_froms {
+        let part = format!(
+            "{}{}",
+            get_prev_transaction_hash(pay_from.transaction),
+            get_prev_transaction_output_index(pay_from.vout_index)
+        );
+        input_part.push_str(&part);
+    }
     let transaction = format!(
-        "{}{}{}{}{}{}{}{}{}{}{}{}",
-        get_version(),
-        get_input_count(1),
-        get_prev_transaction_hash(
-            "2eabf6f8d63d25005866521c844449765e99e43948cb36dd6bbfad544a3d0f17".to_string()
-        ),
-        get_prev_transaction_output_index(1),
+        "{}{}{}{}{}{}{}{}{}{}",
+        get_version(version),
+        input_part,
         get_input_script_length(),
         get_input_script_sig(),
         get_sequence(),
@@ -115,7 +127,17 @@ fn main() {
         get_output_script_sig(),
         get_lock_time(),
     );
+    transaction
+}
 
-    println!();
+fn main() {
+    let transaction = get_transaction(
+        1,
+        vec![PayFrom {
+            transaction: "2eabf6f8d63d25005866521c844449765e99e43948cb36dd6bbfad544a3d0f17"
+                .to_string(),
+            vout_index: 1,
+        }],
+    );
     println!("{}", transaction)
 }
