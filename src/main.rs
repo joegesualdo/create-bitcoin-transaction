@@ -4,6 +4,8 @@
 // - https://en.bitcoin.it/wiki/Protocol_documentation
 // - https://developer.bitcoin.org/reference/transactions.html#:~:text=Bitcoin%20transactions%20are%20broadcast%20between,part%20of%20the%20consensus%20rules.
 // - https://thunderbiscuit.com/posts/transactions-legacy/
+// - https://medium.com/@ottosch/manually-creating-and-signing-a-bitcoin-transaction-87fbbfe46033
+// - https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526
 //
 // Can check work here: https://bc-2.jp/tools/txeditor2.html
 //
