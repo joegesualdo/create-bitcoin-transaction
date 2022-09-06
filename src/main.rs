@@ -3,6 +3,7 @@
 // - https://en.bitcoin.it/wiki/Transaction
 // - https://en.bitcoin.it/wiki/Protocol_documentation
 // - https://developer.bitcoin.org/reference/transactions.html#:~:text=Bitcoin%20transactions%20are%20broadcast%20between,part%20of%20the%20consensus%20rules.
+// - https://thunderbiscuit.com/posts/transactions-legacy/
 //
 // Can check work here: https://bc-2.jp/tools/txeditor2.html
 //
@@ -27,6 +28,7 @@ fn get_version(version: u8) -> String {
 fn get_input_count(input_count: u64) -> String {
     // https://en.bitcoin.it/wiki/Protocol_documentation#Variable_length_integer
     // Currently, only works up to 253 inputs
+    // Explaination of var-ints: https://thunderbiscuit.com/posts/transactions-legacy/
     if input_count < 253 {
         format!("{:02x}", input_count)
     } else {
@@ -74,6 +76,7 @@ fn get_sequence(sequence: &str) -> String {
 fn get_output_count(output_count: u64) -> String {
     // https://en.bitcoin.it/wiki/Protocol_documentation#Variable_length_integer
     // Currently, only works up to 253 inputs
+    // Explaination of var-ints: https://thunderbiscuit.com/posts/transactions-legacy/
     if output_count < 253 {
         format!("{:02x}", output_count)
     } else {
