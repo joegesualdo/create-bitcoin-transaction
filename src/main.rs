@@ -230,7 +230,7 @@ fn main() {
     println!("{}", transaction_to_sign);
     let wif = "cURSuw4bwH6sxKi936DvxLncT6V5oiSz9oi6W9mP4VRqoosXJopY".to_string();
     sign_transaction_with_bitcoin_lib(&transaction_to_sign, &wif);
-    sign_transaction();
+    sign_p2pkh_transaction_with_one_input();
 }
 
 fn hash256(hex: &String) -> String {
@@ -251,7 +251,13 @@ fn hash256(hex: &String) -> String {
     let sha256_result_array_2 = sha256_result_2.to_vec();
     encode_hex(&sha256_result_array_2)
 }
-fn sign_p2pkh_transaction() {
+
+fn sign_segwith_transaction() {
+    // Source: https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526a
+    todo!()
+}
+
+fn sign_p2pkh_transaction_with_one_input() {
     // Source: https://medium.com/@bitaps.com/exploring-bitcoin-signing-the-p2pkh-input-b8b4d5c4809c
     let wif = "cThjSL4HkRECuDxUTnfAmkXFBEg78cufVBy3ZfEhKoxZo6Q38R5L".to_string();
     let input_transaction = "5e2383defe7efcbdc9fdd6dba55da148b206617bbb49e6bb93fce7bfbb459d44";
@@ -269,6 +275,7 @@ fn sign_p2pkh_transaction() {
         script_pub_key_placeholder,
         unsigned_raw_transaction_part_after_script_pub_key
     );
+    println!("unsigned_trnsaction: {}", unsigned_raw_transaction_hex);
 
     let script_pub_key_of_spending_vout = "76a914a235bdde3bb2c326f291d9c281fdc3fe1e956fe088ac";
     let script_pub_key_of_spending_vout_len =
@@ -339,8 +346,11 @@ fn sign_p2pkh_transaction() {
         unsigned_raw_transaction_part_after_script_pub_key,
     );
     println!("HEERRRREEE");
+    println!("private_key: {}", private_key_hex);
+    println!("wif: {}", wif);
+    println!("unsigned: {}", unsigned_raw_transaction_hex,);
     println!(
-        "{}",
+        "signed: {}",
         unsigned_raw_transaction_hex_with_script_pub_key_inserted
     )
 }
