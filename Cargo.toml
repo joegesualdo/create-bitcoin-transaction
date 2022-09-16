@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 hex-utilities = "0.1.3"
+bitcoin = "0.29.1"
+bitcoin-hd-keys = "0.1.1"
