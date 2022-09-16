@@ -57,7 +57,7 @@ dependencies = [
  "rand_seeder",
  "ring",
  "secp256k1",
- "sha2 0.10.6",
+ "sha2 0.10.5",
  "sha256",
 ]
 
@@ -128,6 +128,7 @@ dependencies = [
  "bitcoin",
  "bitcoin-hd-keys",
  "hex-utilities",
+ "sha2 0.10.5",
 ]
 
 [[package]]
@@ -386,9 +387,9 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.10.6"
+version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82e6b795fe2e3b1e845bafcb27aa35405c4d47cdfc92af5fc8d3002f76cebdc0"
+checksum = "cf9db03534dff993187064c4e0c05a5708d2a9728ace9a8959b77bedf415dac5"
 dependencies = [
  "cfg-if",
  "cpufeatures",

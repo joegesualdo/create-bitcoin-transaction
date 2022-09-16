@@ -9,6 +9,7 @@ use bitcoin::{
     OutPoint, PrivateKey, Script, Transaction, TxIn, TxOut, Witness,
 };
 use bitcoin_hd_keys::convert_wif_to_private_key;
+use sha2::{Digest, Sha256};
 // Sources:
 // - http://www.righto.com/2014/02/bitcoins-hard-way-using-raw-bitcoin.html
 // - https://bitcoin.stackexchange.com/questions/3374/how-to-redeem-a-basic-tx
@@ -65,14 +66,17 @@ fn get_prev_transaction_output_index(index: u64) -> String {
     let hex_little_endian = convert_big_endian_hex_to_little_endian(&hex);
     hex_little_endian
 }
-fn get_input_script_length(input_script_hex: &str) -> String {
+fn get_byte_length_of_hex(hex: &str) -> String {
     // Hardcoded to the length of our hardcoded input scrip sig below
     // https://mempool.space/testnet/tx/2eabf6f8d63d25005866521c844449765e99e43948cb36dd6bbfad544a3d0f17
-    let input_script_hex_as_bytes = decode_hex(input_script_hex).unwrap();
-    let input_script_hex_bytes_count = input_script_hex_as_bytes.len();
-    let script_length_bytes_in_hex =
-        convert_decimal_to_hexadecimal(input_script_hex_bytes_count as u64, false, Some(1));
-    script_length_bytes_in_hex
+    let hex_as_bytes = decode_hex(hex).unwrap();
+    let hex_bytes_count = hex_as_bytes.len();
+    let length_bytes_in_hex =
+        convert_decimal_to_hexadecimal(hex_bytes_count as u64, false, Some(1));
+    length_bytes_in_hex
+}
+fn get_input_script_length(input_script_hex: &str) -> String {
+    get_byte_length_of_hex(input_script_hex)
 }
 // Before signing, the script sig in the transaction should be equal to the script pub key hex from
 // the spending vout.
@@ -169,9 +173,9 @@ fn create_p2kh_transaction(version: u8, pay_froms: Vec<PayFrom>, pay_tos: Vec<Pa
             // TODO: This is what we should sign. Commenting out for now
             // input_script_length,
             // input_script_sig_for_signing,
-            get_script_language(&input_script_sig_for_signing),
+            // get_script_language(&input_script_sig_for_signing),
             // HARDCODING THE SCRIPT LENGTH TO ZERO FOR TESETING. REMOVE!
-            // "00",
+            "00",
             sequence,
         );
         input_part.push_str(&part);
@@ -225,10 +229,123 @@ fn main() {
     );
     println!("{}", transaction_to_sign);
     let wif = "cURSuw4bwH6sxKi936DvxLncT6V5oiSz9oi6W9mP4VRqoosXJopY".to_string();
-    sign_transaction(&transaction_to_sign, &wif);
+    sign_transaction_with_bitcoin_lib(&transaction_to_sign, &wif);
+    sign_transaction();
 }
 
-fn sign_transaction(transaction_to_sign: &String, wif: &String) -> () {
+fn hash256(hex: &String) -> String {
+    let hex_byte_array = decode_hex(&hex).unwrap();
+    let mut hasher = Sha256::new();
+    // write input message
+    hasher.update(&hex_byte_array);
+    // read hash digest and consume hasher
+    let sha256_result = hasher.finalize();
+    let sha256_result_array = sha256_result.to_vec();
+
+    let hex_byte_array_2 = sha256_result_array;
+    let mut hasher_2 = Sha256::new();
+    // write input message
+    hasher_2.update(&hex_byte_array_2);
+    // read hash digest and consume hasher
+    let sha256_result_2 = hasher_2.finalize();
+    let sha256_result_array_2 = sha256_result_2.to_vec();
+    encode_hex(&sha256_result_array_2)
+}
+fn sign_p2pkh_transaction() {
+    // Source: https://medium.com/@bitaps.com/exploring-bitcoin-signing-the-p2pkh-input-b8b4d5c4809c
+    let wif = "cThjSL4HkRECuDxUTnfAmkXFBEg78cufVBy3ZfEhKoxZo6Q38R5L".to_string();
+    let input_transaction = "5e2383defe7efcbdc9fdd6dba55da148b206617bbb49e6bb93fce7bfbb459d44";
+    let input_transaction_output = 1;
+    let input_amount = 1.3000000;
+
+    let unsigned_raw_transaction_part_before_script_pub_key =
+        "0100000001449d45bbbfe7fc93bbe649bb7b6106b248a15da5dbd6fdc9bdfc7efede83235e01000000";
+    let unsigned_raw_transaction_part_after_script_pub_key =
+        "ffffffff014062b007000000001976a914f86f0bc0a2232970ccdf4569815db500f126836188ac00000000";
+    let script_pub_key_placeholder = "00";
+    let unsigned_raw_transaction_hex = format!(
+        "{}{}{}",
+        unsigned_raw_transaction_part_before_script_pub_key,
+        script_pub_key_placeholder,
+        unsigned_raw_transaction_part_after_script_pub_key
+    );
+
+    let script_pub_key_of_spending_vout = "76a914a235bdde3bb2c326f291d9c281fdc3fe1e956fe088ac";
+    let script_pub_key_of_spending_vout_len =
+        get_byte_length_of_hex(script_pub_key_of_spending_vout);
+    let script_pub_key_of_spending_vout_with_length_byte = format!(
+        "{}{}",
+        script_pub_key_of_spending_vout_len, script_pub_key_of_spending_vout
+    );
+    let unsigned_raw_transaction_hex_with_script_pub_key_inserted = format!(
+        "{}{}{}",
+        unsigned_raw_transaction_part_before_script_pub_key,
+        script_pub_key_of_spending_vout_with_length_byte,
+        unsigned_raw_transaction_part_after_script_pub_key,
+    );
+
+    // append sighash_all
+    // Before signing, the transaction has a hash type constant temporarily appended. For a regular transaction, this is SIGHASH_ALL (0x00000001). After signing, this hash type is removed from the end of the transaction and appended to the scriptSig.
+    let sighash_all = 1;
+    let sighash_type = sighash_all;
+    let sighash_type_hex_of_4_bytes = convert_decimal_to_hexadecimal(sighash_type, false, Some(4));
+    let sighash_type_hex_in_little_endian =
+        convert_big_endian_hex_to_little_endian(&sighash_type_hex_of_4_bytes);
+    println!("{}", sighash_type_hex_in_little_endian);
+    let input_0_sighash_all_preimage = format!(
+        "{}{}",
+        unsigned_raw_transaction_hex_with_script_pub_key_inserted,
+        sighash_type_hex_in_little_endian
+    );
+
+    let transaction_double_sha_256 = hash256(&input_0_sighash_all_preimage);
+    println!("s256: {}", transaction_double_sha_256);
+
+    let secp = Secp256k1::new();
+    let msg = Message::from_slice(&decode_hex(&transaction_double_sha_256).unwrap()).unwrap();
+
+    let private_key = PrivateKey::from_wif(&wif).unwrap();
+    let private_key_hex = convert_wif_to_private_key(&wif);
+    println!("privk: {}", private_key_hex);
+    let public_key = private_key.public_key(&secp);
+    let public_key_hex = public_key.to_string();
+    println!("pk: {}", public_key_hex);
+
+    let secret_key = SecretKey::from_str(&private_key_hex).unwrap();
+    let mut signature = secp.sign_ecdsa(&msg, &secret_key).serialize_der();
+    println!("sig: {}", signature);
+
+    // this should be calculated
+    let sighash_type_hex_of_1_byte = convert_decimal_to_hexadecimal(sighash_type, false, Some(1));
+    let sighash_type_to_append_to_signature_hex = sighash_type_hex_of_1_byte;
+    let signature_with_sighash_type_appended =
+        format!("{}{}", signature, sighash_type_to_append_to_signature_hex);
+    let signature_with_sighash_type_appended_length =
+        get_byte_length_of_hex(&signature_with_sighash_type_appended);
+    let public_key_length = get_byte_length_of_hex(&public_key_hex);
+    let signature_script = format!(
+        "{}{}{}{}",
+        signature_with_sighash_type_appended_length,
+        signature_with_sighash_type_appended,
+        public_key_length,
+        public_key_hex
+    );
+    let signature_script_length = get_byte_length_of_hex(&signature_script);
+    let unsigned_raw_transaction_hex_with_script_pub_key_inserted = format!(
+        "{}{}{}{}",
+        unsigned_raw_transaction_part_before_script_pub_key,
+        signature_script_length,
+        signature_script,
+        unsigned_raw_transaction_part_after_script_pub_key,
+    );
+    println!("HEERRRREEE");
+    println!(
+        "{}",
+        unsigned_raw_transaction_hex_with_script_pub_key_inserted
+    )
+}
+
+fn sign_transaction_with_bitcoin_lib(transaction_to_sign: &String, wif: &String) -> () {
     // elements required for signing
     let input_index = 0;
     let input_amount = 0;
