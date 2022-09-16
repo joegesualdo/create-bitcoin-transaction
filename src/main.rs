@@ -8,7 +8,7 @@ use bitcoin::{
     secp256k1::{Message, Secp256k1, SecretKey},
     OutPoint, PrivateKey, Script, Transaction, TxIn, TxOut, Witness,
 };
-use bitcoin_hd_keys::convert_wif_to_private_key;
+use bitcoin_hd_keys::{convert_wif_to_private_key, double_sha256};
 use sha2::{Digest, Sha256};
 // Sources:
 // - http://www.righto.com/2014/02/bitcoins-hard-way-using-raw-bitcoin.html
@@ -23,6 +23,11 @@ use sha2::{Digest, Sha256};
 // Can check work here: https://bc-2.jp/tools/txeditor2.html
 //
 //
+//
+
+// TODO:
+// - Sign a transaction with multipl p2pkh vins, not just one
+// - Sign other types of transactions, not only p2pkh
 use hex_utilities::{
     convert_big_endian_hex_to_little_endian, convert_decimal_to_hexadecimal, decode_hex,
     encode_hex, get_text_for_hex,
@@ -233,25 +238,6 @@ fn main() {
     sign_p2pkh_transaction_with_one_input();
 }
 
-fn hash256(hex: &String) -> String {
-    let hex_byte_array = decode_hex(&hex).unwrap();
-    let mut hasher = Sha256::new();
-    // write input message
-    hasher.update(&hex_byte_array);
-    // read hash digest and consume hasher
-    let sha256_result = hasher.finalize();
-    let sha256_result_array = sha256_result.to_vec();
-
-    let hex_byte_array_2 = sha256_result_array;
-    let mut hasher_2 = Sha256::new();
-    // write input message
-    hasher_2.update(&hex_byte_array_2);
-    // read hash digest and consume hasher
-    let sha256_result_2 = hasher_2.finalize();
-    let sha256_result_array_2 = sha256_result_2.to_vec();
-    encode_hex(&sha256_result_array_2)
-}
-
 fn sign_segwith_transaction() {
     // Source: https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526a
     todo!()
@@ -305,7 +291,7 @@ fn sign_p2pkh_transaction_with_one_input() {
         sighash_type_hex_in_little_endian
     );
 
-    let transaction_double_sha_256 = hash256(&input_0_sighash_all_preimage);
+    let transaction_double_sha_256 = double_sha256(&input_0_sighash_all_preimage);
     println!("s256: {}", transaction_double_sha_256);
 
     let secp = Secp256k1::new();
