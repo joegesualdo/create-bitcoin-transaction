@@ -8,7 +8,9 @@ use bitcoin::{
     secp256k1::{Message, Secp256k1, SecretKey},
     OutPoint, PrivateKey, Script, Transaction, TxIn, TxOut, Witness,
 };
-use bitcoin_hd_keys::{convert_wif_to_private_key, double_sha256};
+use bitcoin_hd_keys::{
+    convert_wif_to_private_key, double_sha256, get_public_key_hash_from_address,
+};
 use sha2::{Digest, Sha256};
 // Sources:
 // - http://www.righto.com/2014/02/bitcoins-hard-way-using-raw-bitcoin.html
@@ -21,8 +23,6 @@ use sha2::{Digest, Sha256};
 // - https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526
 //
 // Can check work here: https://bc-2.jp/tools/txeditor2.html
-//
-//
 //
 
 // TODO:
@@ -114,8 +114,7 @@ fn get_output_count(output_count: u64) -> String {
     // }
 }
 
-fn get_output_amount(amount_in_btc: f64) -> String {
-    let amount_in_sats = (amount_in_btc * 100000000.0) as u64;
+fn get_output_amount(amount_in_sats: u64) -> String {
     let amount_in_sats_hex = convert_decimal_to_hexadecimal(amount_in_sats, false, Some(8));
     let little_endian_amount_in_sats = convert_big_endian_hex_to_little_endian(&amount_in_sats_hex);
     little_endian_amount_in_sats
@@ -142,8 +141,8 @@ struct PayFrom {
     pub_key_hash_hex_of_receiver: String,
 }
 struct PayTo {
-    public_key_hash: String,
-    amount_in_btc: f64,
+    address: String,
+    amount_in_sats: u64,
 }
 
 fn create_p2kh_transaction(version: u8, pay_froms: Vec<PayFrom>, pay_tos: Vec<PayTo>) -> String {
@@ -161,7 +160,7 @@ fn create_p2kh_transaction(version: u8, pay_froms: Vec<PayFrom>, pay_tos: Vec<Pa
             &prev_transaction_output_index
         );
         let input_script_sig_for_signing =
-            get_input_script_sig_for_signing(&pay_from.pub_key_hash_hex_of_receiver);
+            get_input_script_sig_for_signing(&pay_from.ub_key_hash_hex_of_receiver);
         let input_script_length = get_input_script_length(&input_script_sig_for_signing);
         println!("    input_script_length: {}", &input_script_length);
         println!("    input_script_sig: {}", &input_script_sig_for_signing);
@@ -191,11 +190,12 @@ fn create_p2kh_transaction(version: u8, pay_froms: Vec<PayFrom>, pay_tos: Vec<Pa
     let mut output_part = String::new();
     output_part.push_str(&output_count);
     for pay_to in pay_tos {
+        let public_key_hash = get_public_key_hash_from_address(&pay_to.address);
         let part = format!(
             "{}{}{}",
-            get_output_amount(pay_to.amount_in_btc),
-            get_output_script_length(&pay_to.public_key_hash),
-            get_output_script_sig(pay_to.public_key_hash),
+            get_output_amount(pay_to.amount_in_sats),
+            get_output_script_length(&public_key_hash),
+            get_output_script_sig(public_key_hash),
         );
         output_part.push_str(&part);
     }
@@ -214,25 +214,27 @@ fn main() {
     let transaction_to_sign = create_p2kh_transaction(
         1,
         vec![PayFrom {
-            transaction: "462a2706ae3b178124683144334f6eee96776e9847c4212830a92d555487e2a3"
+            transaction: "72e73ef29facc4c758a603c584465336892efb54a374e00711608cabaf544fb3"
                 .to_string(),
             vout_index: 0,
             // Corresponding public key (not hashed): 02cc65acf65de73f023eeb43d15f5203dc39556ccff1d261ba0ec6530f14b86ec2
             // Corresponding wif: cURSuw4bwH6sxKi936DvxLncT6V5oiSz9oi6W9mP4VRqoosXJopY
-            pub_key_hash_hex_of_receiver: "d43181ff75c4ed662b92fd23c007460b1af5fff7".to_string(),
+            pub_key_hash_hex_of_receiver: "e10319f137870564be80ad168106a5c542c12633".to_string(),
         }],
         vec![
+            // m/44'/1'/0'/0/4 muFWn6AhQE9Snp2jLr7xqDjtw1vAkJuoZa     96a638a9e0687505f3699b8f5dcc2c94ba329d0d          cUTzJbbFAjgCQVb1P9KnhNKdiZkjSr6RvTSCaFKT8EGmsuJ4pYsY
             PayTo {
-                public_key_hash: "6502c6cd7a86d27306352fdc0d15aa480549e963".to_string(),
-                amount_in_btc: 0.00005383,
+                address: "muFWn6AhQE9Snp2jLr7xqDjtw1vAkJuoZa".to_string(),
+                amount_in_sats: 6700,
             },
-            PayTo {
-                public_key_hash: "fe8c68f718a4fa75279f98bf79fae75ed779ae24".to_string(),
-                amount_in_btc: 0.00001,
-            },
+            // PayTo {
+            //     public_key_hash: "fe8c68f718a4fa75279f98bf79fae75ed779ae24".to_string(),
+            //     amount_in_btc: 0.00001,
+            // },
         ],
     );
-    println!("{}", transaction_to_sign);
+    println!("UNSIGNED_TRANSACTION: {}", transaction_to_sign);
+
     let wif = "cURSuw4bwH6sxKi936DvxLncT6V5oiSz9oi6W9mP4VRqoosXJopY".to_string();
     sign_transaction_with_bitcoin_lib(&transaction_to_sign, &wif);
     sign_p2pkh_transaction_with_one_input();

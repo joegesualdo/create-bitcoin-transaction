@@ -42,9 +42,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin-hd-keys"
-version = "0.1.2"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86979220c86e87454d5c98ff1733ef87ae167d4c5a119300d355c447bd998c3d"
+checksum = "6f56696f7fb9093bb9c0d8507cdd1347f5518b0e250c1517b269a18f4dc851e6"
 dependencies = [
  "bitcoin",
  "bitcoin-bech32",
