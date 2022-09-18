@@ -140,6 +140,7 @@ fn get_lock_time() -> String {
 struct PayFrom {
     transaction: String,
     vout_index: u64,
+    script_pub_key_hex_of_vout: String,
     // pub_key_hash_hex_of_receiver: String,
 }
 #[derive(Clone)]
@@ -283,6 +284,8 @@ fn main() {
     let pay_froms = vec![PayFrom {
         transaction: "72e73ef29facc4c758a603c584465336892efb54a374e00711608cabaf544fb3".to_string(),
         vout_index: 0,
+        script_pub_key_hex_of_vout: "76a914e10319f137870564be80ad168106a5c542c1263388ac"
+            .to_string(),
         // Corresponding public key (not hashed): 02cc65acf65de73f023eeb43d15f5203dc39556ccff1d261ba0ec6530f14b86ec2
         // Corresponding wif: cURSuw4bwH6sxKi936DvxLncT6V5oiSz9oi6W9mP4VRqoosXJopY
         // pub_key_hash_hex_of_receiver: "e10319f137870564be80ad168106a5c542c12633".to_string(),
@@ -299,13 +302,14 @@ fn main() {
         // },
     ];
 
-    let parts = P2PKHTransaction::new(pay_froms.clone(), pay_tos.clone()).get_parts();
+    let transaction = P2PKHTransaction::new(pay_froms.clone(), pay_tos.clone());
+    let parts = transaction.get_parts();
     let transaction_to_sign = parts.get_raw_string();
     println!("UNSIGNED: {}", transaction_to_sign);
     let wif = "cTCAu1TDXUtS3eifJNd6KQvmpFUGiL29KwJiBCkMvb48PrtfUDri".to_string();
     let sig = sign_transaction_with_bitcoin_lib(&transaction_to_sign, &wif);
     println!("signatureeee! {}", sig);
-    sign_p2pkh_transaction_with_one_input();
+    sign_p2pkh_transaction_with_one_input(&transaction, &wif);
 }
 
 fn sign_segwith_transaction() {
@@ -313,18 +317,48 @@ fn sign_segwith_transaction() {
     todo!()
 }
 
-fn sign_p2pkh_transaction_with_one_input() {
+fn sign_p2pkh_transaction_with_one_input(transaction_to_sign: &P2PKHTransaction, wif: &String) {
     // Source: https://medium.com/@bitaps.com/exploring-bitcoin-signing-the-p2pkh-input-b8b4d5c4809c
-    let wif = "cThjSL4HkRECuDxUTnfAmkXFBEg78cufVBy3ZfEhKoxZo6Q38R5L".to_string();
-    let input_transaction = "5e2383defe7efcbdc9fdd6dba55da148b206617bbb49e6bb93fce7bfbb459d44";
-    let input_transaction_output = 1;
-    let input_amount = 1.3000000;
+    let vout_index_to_sign = 0;
+    let vout = &transaction_to_sign.inputs[vout_index_to_sign];
+    let script_pub_key_of_spending_vout = &vout.script_pub_key_hex_of_vout;
+    // let input_transaction = "5e2383defe7efcbdc9fdd6dba55da148b206617bbb49e6bb93fce7bfbb459d44";
+    // let input_transaction_output = 1;
+    // let input_amount = 1.3000000;
+    //
 
-    let unsigned_raw_transaction_part_before_script_pub_key =
-        "0100000001449d45bbbfe7fc93bbe649bb7b6106b248a15da5dbd6fdc9bdfc7efede83235e01000000";
-    let unsigned_raw_transaction_part_after_script_pub_key =
-        "ffffffff014062b007000000001976a914f86f0bc0a2232970ccdf4569815db500f126836188ac00000000";
+    let raw_transaction = transaction_to_sign.get_parts();
+    let raw_input = &raw_transaction.inputs[vout_index_to_sign];
+    let unsigned_raw_transaction_part_before_script_pub_key = format!(
+        "{}{}{}{}",
+        raw_transaction.version_hex,
+        raw_transaction.get_inputs_count_hex(),
+        raw_input.previous_transaction_hash_hex,
+        raw_input.previous_transaction_output_index_hex
+    );
+    println!(
+        "before: {}",
+        unsigned_raw_transaction_part_before_script_pub_key
+    );
+    let unsigned_raw_transaction_part_after_script_pub_key = format!(
+        "{}{}{}{}",
+        raw_input.sequence_hex,
+        raw_transaction.get_outputs_count_hex(),
+        raw_transaction
+            .outputs
+            .iter()
+            .fold(String::new(), |acc, raw_output| {
+                format!("{}{}", acc, raw_output.get_raw_string())
+            }),
+        raw_transaction.locktime_hex,
+    );
+    println!(
+        "after: {}",
+        unsigned_raw_transaction_part_after_script_pub_key
+    );
+
     let script_pub_key_placeholder = "00";
+
     let unsigned_raw_transaction_hex = format!(
         "{}{}{}",
         unsigned_raw_transaction_part_before_script_pub_key,
@@ -333,9 +367,8 @@ fn sign_p2pkh_transaction_with_one_input() {
     );
     println!("unsigned_trnsaction: {}", unsigned_raw_transaction_hex);
 
-    let script_pub_key_of_spending_vout = "76a914a235bdde3bb2c326f291d9c281fdc3fe1e956fe088ac";
     let script_pub_key_of_spending_vout_len =
-        get_byte_length_of_hex(script_pub_key_of_spending_vout);
+        get_byte_length_of_hex(&script_pub_key_of_spending_vout);
     let script_pub_key_of_spending_vout_with_length_byte = format!(
         "{}{}",
         script_pub_key_of_spending_vout_len, script_pub_key_of_spending_vout
