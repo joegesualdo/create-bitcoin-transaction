@@ -62,7 +62,7 @@ fn get_input_count(input_count: u64) -> String {
     //     todo!()
     // }
 }
-fn get_prev_transaction_hash(prev_output_hash: String) -> String {
+fn get_prev_transaction_hash(prev_output_hash: &String) -> String {
     let little_endian_prev_output_hash = convert_big_endian_hex_to_little_endian(&prev_output_hash);
     little_endian_prev_output_hash
 }
@@ -80,7 +80,7 @@ fn get_byte_length_of_hex(hex: &str) -> String {
         convert_decimal_to_hexadecimal(hex_bytes_count as u64, false, Some(1));
     length_bytes_in_hex
 }
-fn get_input_script_length(input_script_hex: &str) -> String {
+fn get_input_script_sig_length(input_script_hex: &str) -> String {
     get_byte_length_of_hex(input_script_hex)
 }
 // Before signing, the script sig in the transaction should be equal to the script pub key hex from
@@ -119,13 +119,14 @@ fn get_output_amount(amount_in_sats: u64) -> String {
     let little_endian_amount_in_sats = convert_big_endian_hex_to_little_endian(&amount_in_sats_hex);
     little_endian_amount_in_sats
 }
-fn get_output_script_length(public_key_hash: &String) -> String {
-    let output_script_sig_hex = get_output_script_sig(public_key_hash.to_string());
-    let output_script_sig_hex_as_bytes = decode_hex(&output_script_sig_hex).unwrap();
-    let output_script_sig_hex_bytes_count = output_script_sig_hex_as_bytes.len();
-    let script_length_bytes_in_hex =
-        convert_decimal_to_hexadecimal(output_script_sig_hex_bytes_count as u64, false, Some(1));
-    script_length_bytes_in_hex
+fn get_output_script_length(output_script_pub_key_hex: &String) -> String {
+    // let output_script_sig_hex = get_output_script_sig(public_key_hash.to_string());
+    // let output_script_sig_hex_as_bytes = decode_hex(&output_script_sig_hex).unwrap();
+    // let output_script_sig_hex_bytes_count = output_script_sig_hex_as_bytes.len();
+    // let script_length_bytes_in_hex =
+    //     convert_decimal_to_hexadecimal(output_script_sig_hex_bytes_count as u64, false, Some(1));
+    // script_length_bytes_in_hex
+    get_byte_length_of_hex(output_script_pub_key_hex)
 }
 fn get_output_script_sig(public_key_hash: String) -> String {
     let public_key_hash_to_send_to = public_key_hash.to_string();
@@ -135,16 +136,151 @@ fn get_lock_time() -> String {
     "00000000".to_string()
 }
 
+#[derive(Clone)]
 struct PayFrom {
     transaction: String,
     vout_index: u64,
     pub_key_hash_hex_of_receiver: String,
 }
+#[derive(Clone)]
 struct PayTo {
     address: String,
     amount_in_sats: u64,
 }
 
+struct P2PKHTransaction {
+    version: u8,
+    inputs: Vec<PayFrom>,
+    outputs: Vec<PayTo>,
+    locktime: String,
+}
+
+impl P2PKHTransaction {
+    fn new(inputs: Vec<PayFrom>, outputs: Vec<PayTo>) -> Self {
+        P2PKHTransaction {
+            version: 1,
+            inputs,
+            outputs,
+            locktime: "00000000".to_string(),
+        }
+    }
+
+    fn get_parts(&self) -> P2PKHRawTransaction {
+        P2PKHRawTransaction {
+            version_hex: get_version(self.version),
+            inputs: self
+                .inputs
+                .iter()
+                .map(|input| {
+                    P2PKHRawInput {
+                        previous_transaction_hash_hex: get_prev_transaction_hash(
+                            &input.transaction,
+                        ),
+                        previous_transaction_output_index_hex: get_prev_transaction_output_index(
+                            input.vout_index,
+                        ),
+                        // TODO: Hardcoding this for unsigned transactions
+                        script_sig_hex: "".to_string(),
+                        // TODO: Hardcoding for now
+                        sequence_hex: get_sequence("fdffffff"),
+                    }
+                })
+                .collect(),
+            outputs: self
+                .outputs
+                .iter()
+                .map(|output| {
+                    let public_key_hash = get_public_key_hash_from_address(&output.address);
+                    P2PKHRawOutput {
+                        amount_hex: get_output_amount(output.amount_in_sats),
+                        script_pub_key_hex: get_output_script_sig(public_key_hash),
+                    }
+                })
+                .collect(),
+            // TODO: Hardcoded
+            locktime_hex: self.locktime.clone(),
+        }
+    }
+    fn get_raw(&self) -> String {
+        create_p2kh_transaction(self.version, self.inputs.clone(), self.outputs.clone())
+    }
+}
+#[derive(Debug)]
+struct P2PKHRawInput {
+    previous_transaction_hash_hex: String,
+    previous_transaction_output_index_hex: String,
+    script_sig_hex: String,
+    sequence_hex: String,
+}
+impl P2PKHRawInput {
+    fn get_script_sig_length_hex(&self) -> String {
+        get_input_script_sig_length(&self.script_sig_hex)
+    }
+    fn get_raw_string(&self) -> String {
+        format!(
+            "{}{}{}{}{}",
+            self.previous_transaction_hash_hex,
+            self.previous_transaction_output_index_hex,
+            self.get_script_sig_length_hex(),
+            self.script_sig_hex,
+            self.sequence_hex
+        )
+    }
+}
+#[derive(Debug)]
+struct P2PKHRawOutput {
+    amount_hex: String,
+    script_pub_key_hex: String,
+}
+impl P2PKHRawOutput {
+    fn get_script_pub_key_length_hex(&self) -> String {
+        get_output_script_length(&self.script_pub_key_hex)
+    }
+    fn get_raw_string(&self) -> String {
+        format!(
+            "{}{}{}",
+            self.amount_hex,
+            self.get_script_pub_key_length_hex(),
+            self.script_pub_key_hex
+        )
+    }
+}
+#[derive(Debug)]
+struct P2PKHRawTransaction {
+    version_hex: String,
+    inputs: Vec<P2PKHRawInput>,
+    outputs: Vec<P2PKHRawOutput>,
+    locktime_hex: String,
+}
+impl P2PKHRawTransaction {
+    fn get_raw_string(&self) -> String {
+        format!(
+            "{}{}{}{}{}{}",
+            self.version_hex,
+            self.get_inputs_count_hex(),
+            self.inputs.iter().fold(String::new(), |acc, input| format!(
+                "{}{}",
+                acc,
+                &input.get_raw_string()
+            )),
+            self.get_outputs_count_hex(),
+            self.outputs
+                .iter()
+                .fold(String::new(), |acc, input| format!(
+                    "{}{}",
+                    acc,
+                    &input.get_raw_string()
+                )),
+            self.locktime_hex
+        )
+    }
+    fn get_inputs_count_hex(&self) -> String {
+        get_input_count(self.inputs.len() as u64)
+    }
+    fn get_outputs_count_hex(&self) -> String {
+        get_output_count(self.inputs.len() as u64)
+    }
+}
 fn create_p2kh_transaction(version: u8, pay_froms: Vec<PayFrom>, pay_tos: Vec<PayTo>) -> String {
     let input_count = get_input_count(pay_froms.len() as u64);
     println!("input_count: {}", &input_count);
@@ -152,7 +288,7 @@ fn create_p2kh_transaction(version: u8, pay_froms: Vec<PayFrom>, pay_tos: Vec<Pa
     input_part.push_str(&input_count);
     for pay_from in pay_froms {
         println!("payfrom parts --------------------:");
-        let prev_transaction_hash = get_prev_transaction_hash(pay_from.transaction);
+        let prev_transaction_hash = get_prev_transaction_hash(&pay_from.transaction);
         println!("    prev_transaction_hash: {}", &prev_transaction_hash);
         let prev_transaction_output_index = get_prev_transaction_output_index(pay_from.vout_index);
         println!(
@@ -161,7 +297,7 @@ fn create_p2kh_transaction(version: u8, pay_froms: Vec<PayFrom>, pay_tos: Vec<Pa
         );
         let input_script_sig_for_signing =
             get_input_script_sig_for_signing(&pay_from.pub_key_hash_hex_of_receiver);
-        let input_script_length = get_input_script_length(&input_script_sig_for_signing);
+        let input_script_length = get_input_script_sig_length(&input_script_sig_for_signing);
         println!("    input_script_length: {}", &input_script_length);
         println!("    input_script_sig: {}", &input_script_sig_for_signing);
         // TODO: Can also use ffffffff. What's the difference. Why does sparrow use fdffffffff
@@ -191,11 +327,12 @@ fn create_p2kh_transaction(version: u8, pay_froms: Vec<PayFrom>, pay_tos: Vec<Pa
     output_part.push_str(&output_count);
     for pay_to in pay_tos {
         let public_key_hash = get_public_key_hash_from_address(&pay_to.address);
+        let output_script_pub_key_hex = get_output_script_sig(public_key_hash);
         let part = format!(
             "{}{}{}",
             get_output_amount(pay_to.amount_in_sats),
-            get_output_script_length(&public_key_hash),
-            get_output_script_sig(public_key_hash),
+            get_output_script_length(&output_script_pub_key_hex),
+            output_script_pub_key_hex
         );
         output_part.push_str(&part);
     }
@@ -211,33 +348,36 @@ fn create_p2kh_transaction(version: u8, pay_froms: Vec<PayFrom>, pay_tos: Vec<Pa
 }
 
 fn main() {
-    let transaction_to_sign = create_p2kh_transaction(
-        1,
-        vec![PayFrom {
-            transaction: "72e73ef29facc4c758a603c584465336892efb54a374e00711608cabaf544fb3"
-                .to_string(),
-            vout_index: 0,
-            // Corresponding public key (not hashed): 02cc65acf65de73f023eeb43d15f5203dc39556ccff1d261ba0ec6530f14b86ec2
-            // Corresponding wif: cURSuw4bwH6sxKi936DvxLncT6V5oiSz9oi6W9mP4VRqoosXJopY
-            pub_key_hash_hex_of_receiver: "e10319f137870564be80ad168106a5c542c12633".to_string(),
-        }],
-        vec![
-            // m/44'/1'/0'/0/4 muFWn6AhQE9Snp2jLr7xqDjtw1vAkJuoZa     96a638a9e0687505f3699b8f5dcc2c94ba329d0d          cUTzJbbFAjgCQVb1P9KnhNKdiZkjSr6RvTSCaFKT8EGmsuJ4pYsY
-            PayTo {
-                address: "muFWn6AhQE9Snp2jLr7xqDjtw1vAkJuoZa".to_string(),
-                amount_in_sats: 6700,
-            },
-            // PayTo {
-            //     public_key_hash: "fe8c68f718a4fa75279f98bf79fae75ed779ae24".to_string(),
-            //     amount_in_btc: 0.00001,
-            // },
-        ],
-    );
+    let pay_froms = vec![PayFrom {
+        transaction: "72e73ef29facc4c758a603c584465336892efb54a374e00711608cabaf544fb3".to_string(),
+        vout_index: 0,
+        // Corresponding public key (not hashed): 02cc65acf65de73f023eeb43d15f5203dc39556ccff1d261ba0ec6530f14b86ec2
+        // Corresponding wif: cURSuw4bwH6sxKi936DvxLncT6V5oiSz9oi6W9mP4VRqoosXJopY
+        pub_key_hash_hex_of_receiver: "e10319f137870564be80ad168106a5c542c12633".to_string(),
+    }];
+    let pay_tos = vec![
+        // m/44'/1'/0'/0/4 muFWn6AhQE9Snp2jLr7xqDjtw1vAkJuoZa     96a638a9e0687505f3699b8f5dcc2c94ba329d0d          cUTzJbbFAjgCQVb1P9KnhNKdiZkjSr6RvTSCaFKT8EGmsuJ4pYsY
+        PayTo {
+            address: "muFWn6AhQE9Snp2jLr7xqDjtw1vAkJuoZa".to_string(),
+            amount_in_sats: 6700,
+        },
+        // PayTo {
+        //     public_key_hash: "fe8c68f718a4fa75279f98bf79fae75ed779ae24".to_string(),
+        //     amount_in_btc: 0.00001,
+        // },
+    ];
+    let transaction_to_sign = create_p2kh_transaction(1, pay_froms.clone(), pay_tos.clone());
     println!("UNSIGNED_TRANSACTION: {}", transaction_to_sign);
 
     let wif = "cURSuw4bwH6sxKi936DvxLncT6V5oiSz9oi6W9mP4VRqoosXJopY".to_string();
     sign_transaction_with_bitcoin_lib(&transaction_to_sign, &wif);
     sign_p2pkh_transaction_with_one_input();
+
+    let raw = P2PKHTransaction::new(pay_froms.clone(), pay_tos.clone()).get_raw();
+    let parts = P2PKHTransaction::new(pay_froms.clone(), pay_tos.clone()).get_parts();
+    println!("{}", raw);
+    println!("{:#?}", parts);
+    println!("{}", parts.get_raw_string());
 }
 
 fn sign_segwith_transaction() {
