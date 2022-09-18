@@ -140,7 +140,7 @@ fn get_lock_time() -> String {
 struct PayFrom {
     transaction: String,
     vout_index: u64,
-    pub_key_hash_hex_of_receiver: String,
+    // pub_key_hash_hex_of_receiver: String,
 }
 #[derive(Clone)]
 struct PayTo {
@@ -200,9 +200,6 @@ impl P2PKHTransaction {
             // TODO: Hardcoded
             locktime_hex: self.locktime.clone(),
         }
-    }
-    fn get_raw(&self) -> String {
-        create_p2kh_transaction(self.version, self.inputs.clone(), self.outputs.clone())
     }
 }
 #[derive(Debug)]
@@ -281,71 +278,6 @@ impl P2PKHRawTransaction {
         get_output_count(self.inputs.len() as u64)
     }
 }
-fn create_p2kh_transaction(version: u8, pay_froms: Vec<PayFrom>, pay_tos: Vec<PayTo>) -> String {
-    let input_count = get_input_count(pay_froms.len() as u64);
-    println!("input_count: {}", &input_count);
-    let mut input_part = String::new();
-    input_part.push_str(&input_count);
-    for pay_from in pay_froms {
-        println!("payfrom parts --------------------:");
-        let prev_transaction_hash = get_prev_transaction_hash(&pay_from.transaction);
-        println!("    prev_transaction_hash: {}", &prev_transaction_hash);
-        let prev_transaction_output_index = get_prev_transaction_output_index(pay_from.vout_index);
-        println!(
-            "    prev_transaction_output_index: {}",
-            &prev_transaction_output_index
-        );
-        let input_script_sig_for_signing =
-            get_input_script_sig_for_signing(&pay_from.pub_key_hash_hex_of_receiver);
-        let input_script_length = get_input_script_sig_length(&input_script_sig_for_signing);
-        println!("    input_script_length: {}", &input_script_length);
-        println!("    input_script_sig: {}", &input_script_sig_for_signing);
-        // TODO: Can also use ffffffff. What's the difference. Why does sparrow use fdffffffff
-        let sequence = get_sequence("fdffffff");
-        println!("    sequence: {}", &sequence);
-        let part = format!(
-            "{}{}{}{}",
-            prev_transaction_hash,
-            prev_transaction_output_index,
-            // NOTE: I think the input script lenght and sig only needs to be added when signing,
-            // not for the raw transaction. So instead of putting it here, we do it during the
-            // signing process. What we do is put the script from the vout of this input in here.
-            // TODO: This is what we should sign. Commenting out for now
-            // input_script_length,
-            // input_script_sig_for_signing,
-            // get_script_language(&input_script_sig_for_signing),
-            // HARDCODING THE SCRIPT LENGTH TO ZERO FOR TESETING. REMOVE!
-            "00",
-            sequence,
-        );
-        input_part.push_str(&part);
-        println!("--------------------");
-        println!("payfrom: {}", &part)
-    }
-    let output_count = get_output_count(pay_tos.len() as u64);
-    let mut output_part = String::new();
-    output_part.push_str(&output_count);
-    for pay_to in pay_tos {
-        let public_key_hash = get_public_key_hash_from_address(&pay_to.address);
-        let output_script_pub_key_hex = get_output_script_sig(public_key_hash);
-        let part = format!(
-            "{}{}{}",
-            get_output_amount(pay_to.amount_in_sats),
-            get_output_script_length(&output_script_pub_key_hex),
-            output_script_pub_key_hex
-        );
-        output_part.push_str(&part);
-    }
-
-    let transaction = format!(
-        "{}{}{}{}",
-        get_version(version),
-        input_part,
-        output_part,
-        get_lock_time(),
-    );
-    transaction
-}
 
 fn main() {
     let pay_froms = vec![PayFrom {
@@ -353,12 +285,12 @@ fn main() {
         vout_index: 0,
         // Corresponding public key (not hashed): 02cc65acf65de73f023eeb43d15f5203dc39556ccff1d261ba0ec6530f14b86ec2
         // Corresponding wif: cURSuw4bwH6sxKi936DvxLncT6V5oiSz9oi6W9mP4VRqoosXJopY
-        pub_key_hash_hex_of_receiver: "e10319f137870564be80ad168106a5c542c12633".to_string(),
+        // pub_key_hash_hex_of_receiver: "e10319f137870564be80ad168106a5c542c12633".to_string(),
     }];
     let pay_tos = vec![
         // m/44'/1'/0'/0/4 muFWn6AhQE9Snp2jLr7xqDjtw1vAkJuoZa     96a638a9e0687505f3699b8f5dcc2c94ba329d0d          cUTzJbbFAjgCQVb1P9KnhNKdiZkjSr6RvTSCaFKT8EGmsuJ4pYsY
         PayTo {
-            address: "muFWn6AhQE9Snp2jLr7xqDjtw1vAkJuoZa".to_string(),
+            address: "mjwM4pJLaYLAoGenBWdoUoVCccbM1jYqds".to_string(),
             amount_in_sats: 6700,
         },
         // PayTo {
@@ -366,18 +298,14 @@ fn main() {
         //     amount_in_btc: 0.00001,
         // },
     ];
-    let transaction_to_sign = create_p2kh_transaction(1, pay_froms.clone(), pay_tos.clone());
-    println!("UNSIGNED_TRANSACTION: {}", transaction_to_sign);
 
-    let wif = "cURSuw4bwH6sxKi936DvxLncT6V5oiSz9oi6W9mP4VRqoosXJopY".to_string();
-    sign_transaction_with_bitcoin_lib(&transaction_to_sign, &wif);
-    sign_p2pkh_transaction_with_one_input();
-
-    let raw = P2PKHTransaction::new(pay_froms.clone(), pay_tos.clone()).get_raw();
     let parts = P2PKHTransaction::new(pay_froms.clone(), pay_tos.clone()).get_parts();
-    println!("{}", raw);
-    println!("{:#?}", parts);
-    println!("{}", parts.get_raw_string());
+    let transaction_to_sign = parts.get_raw_string();
+    println!("UNSIGNED: {}", transaction_to_sign);
+    let wif = "cTCAu1TDXUtS3eifJNd6KQvmpFUGiL29KwJiBCkMvb48PrtfUDri".to_string();
+    let sig = sign_transaction_with_bitcoin_lib(&transaction_to_sign, &wif);
+    println!("signatureeee! {}", sig);
+    sign_p2pkh_transaction_with_one_input();
 }
 
 fn sign_segwith_transaction() {
@@ -483,7 +411,7 @@ fn sign_p2pkh_transaction_with_one_input() {
     )
 }
 
-fn sign_transaction_with_bitcoin_lib(transaction_to_sign: &String, wif: &String) -> () {
+fn sign_transaction_with_bitcoin_lib(transaction_to_sign: &String, wif: &String) -> String {
     // elements required for signing
     let input_index = 0;
     let input_amount = 0;
@@ -581,6 +509,7 @@ fn sign_transaction_with_bitcoin_lib(transaction_to_sign: &String, wif: &String)
     println!("serialized: {:?}", serialized);
     println!("serialized: {:?}", encode_hex(&serialized));
     println!("txHash: {:?}", raw_tx.txid());
+    return encode_hex(&serialized);
 
     //sig.push(1); // sign hash type
 }
