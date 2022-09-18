@@ -160,7 +160,7 @@ fn create_p2kh_transaction(version: u8, pay_froms: Vec<PayFrom>, pay_tos: Vec<Pa
             &prev_transaction_output_index
         );
         let input_script_sig_for_signing =
-            get_input_script_sig_for_signing(&pay_from.ub_key_hash_hex_of_receiver);
+            get_input_script_sig_for_signing(&pay_from.pub_key_hash_hex_of_receiver);
         let input_script_length = get_input_script_length(&input_script_sig_for_signing);
         println!("    input_script_length: {}", &input_script_length);
         println!("    input_script_sig: {}", &input_script_sig_for_signing);
