@@ -450,9 +450,9 @@ fn sign_p2pkh_transaction_with_one_input(
     unsigned_raw_transaction_hex_with_script_pub_key_inserted
 }
 
-fn sign_transaction_with_bitcoin_lib(transaction_to_sign: &String, wif: &String) -> String {
+fn sign_transaction_with_bitcoin_lib(transaction: &P2PKHTransaction, wif: &String) -> String {
     // elements required for signing
-    let input_index = 0;
+    let input_index: usize = 0;
     let input_amount = 0;
     // this will be the scriptPubKey form the vout
     //let script = "..."
@@ -479,32 +479,37 @@ fn sign_transaction_with_bitcoin_lib(transaction_to_sign: &String, wif: &String)
     //
     //
 
+    let transaction_input = &transaction.inputs[input_index];
+    let transaction_output = &transaction.outputs[0];
     let mut raw_tx = Transaction {
         version: 1,
         lock_time: bitcoin::PackedLockTime(0),
         input: vec![TxIn {
             previous_output: OutPoint::from_str(
-                "462a2706ae3b178124683144334f6eee96776e9847c4212830a92d555487e2a3:0",
+                format!(
+                    "{}:{}",
+                    transaction_input.transaction, transaction_input.vout_index
+                )
+                .as_str(),
             )
             .unwrap(),
             script_sig: Script::new(),
             sequence: bitcoin::Sequence(0),
             witness: Witness::default(),
         }],
-        output: vec![
-            TxOut {
-                value: 5383,
-                script_pubkey: Script::from(
-                    decode_hex("76a9146502c6cd7a86d27306352fdc0d15aa480549e96388ac").unwrap(),
-                ),
-            },
-            TxOut {
-                value: 1000,
-                script_pubkey: Script::from(
-                    decode_hex("76a914fe8c68f718a4fa75279f98bf79fae75ed779ae2488ac").unwrap(),
-                ),
-            },
-        ],
+        output: vec![TxOut {
+            value: transaction_output.amount_in_sats,
+            script_pubkey: Script::from(
+                decode_hex(
+                    format!(
+                        "76a914{}88ac",
+                        get_public_key_hash_from_address(&transaction_output.address)
+                    )
+                    .as_str(),
+                )
+                .unwrap(),
+            ),
+        }],
     };
 
     let input_index = 0;
@@ -512,7 +517,7 @@ fn sign_transaction_with_bitcoin_lib(transaction_to_sign: &String, wif: &String)
     let hash_type = sighash_all_hash_type; // would be 1 in decimal. Hex must this long (32 bytes?)
     let sig_hash = raw_tx.signature_hash(
         input_index,
-        &Script::from(decode_hex("76a914d43181ff75c4ed662b92fd23c007460b1af5fff788ac").unwrap()),
+        &Script::from(decode_hex(&transaction_input.script_pub_key_hex_of_vout).unwrap()),
         hash_type,
     );
 
@@ -562,22 +567,22 @@ fn get_script_language(script_hex: &String) -> String {
 
 fn main() {
     let pay_froms = vec![PayFrom {
-        transaction: "ed0e4f8dc69b1a4ba14b878355e78d449f3e94bd58343684bf0b28d3df46a915".to_string(),
+        transaction: "542331317d4ee3f9c7493b47e4c1c45f3db33f6553b3f392d90ac38a124de569".to_string(),
         vout_index: 0,
-        script_pub_key_hex_of_vout: "76a914744fdb2bb8873d7b281f11eacb91d8ad41903a8c88ac"
+        script_pub_key_hex_of_vout: "76a9148d4008d801b1c272d9f6421dabab39182512029088ac"
             .to_string(),
     }];
     let pay_tos = vec![PayTo {
-        address: "mjbX9Sg94mfHKrhkkVrVfmZRvMMyYBh2fr".to_string(),
-        amount_in_sats: 6507,
+        address: "mnYKHkkiUXmoeMvE3TYhZP5bKCciec24Zr".to_string(),
+        amount_in_sats: 70366,
     }];
 
     let transaction = P2PKHTransaction::new(pay_froms.clone(), pay_tos.clone());
     let parts = transaction.get_parts();
     let transaction_to_sign = parts.get_raw_string();
 
-    let wif = "cPYgEjvUjxJCLHh4oUNSJGUahRRj1R6MzXnEKjKYVqr6jHLknvCS".to_string();
-    let bitcoin_lib_signature = sign_transaction_with_bitcoin_lib(&transaction_to_sign, &wif);
+    let wif = "cMrosHSaH32Vt7L4CT3SDVNKpwRP6T5vrm7tqCZJ4d5AfZbffoSa".to_string();
+    let bitcoin_lib_signature = sign_transaction_with_bitcoin_lib(&transaction, &wif);
     let signature = sign_p2pkh_transaction_with_one_input(&transaction, &wif);
     println!("UNSIGNED transaction: \n{}", transaction_to_sign);
     println!();
