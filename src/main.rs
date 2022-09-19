@@ -291,7 +291,7 @@ impl P2PKHRawTransaction {
         get_input_count(self.inputs.len() as u64)
     }
     fn get_outputs_count_hex(&self) -> String {
-        get_output_count(self.inputs.len() as u64)
+        get_output_count(self.outputs.len() as u64)
     }
     fn replace_script_sig_hex_at_index(self, new_script_sig_hex: &String, at_index: usize) -> Self {
         let inputs = self.inputs;
@@ -368,8 +368,9 @@ fn sign_p2pkh_transaction_with_one_input(
     );
     //let unsigned_raw_transaction = transaction_to_sign.get_parts();
     //
-    let unsigned_raw_transaction = transaction_to_sign.get_parts();
-    let unsigned_raw_transaction_hex = unsigned_raw_transaction.get_raw_string();
+    // ALT
+    // let unsigned_raw_transaction = transaction_to_sign.get_parts();
+    // let unsigned_raw_transaction_hex = unsigned_raw_transaction.get_raw_string();
 
     let script_pub_key_of_spending_vout_len =
         get_byte_length_of_hex(&script_pub_key_of_spending_vout);
@@ -384,11 +385,9 @@ fn sign_p2pkh_transaction_with_one_input(
         script_pub_key_of_spending_vout_with_length_byte,
         unsigned_raw_transaction_part_after_script_pub_key,
     );
-    let unsigned_raw_transaction_with_pub_key_of_spending_vout = unsigned_raw_transaction
-        .clone()
-        .replace_script_sig_hex_at_index(&script_pub_key_of_spending_vout, vout_index_to_sign);
-    let unsigned_raw_transaction_hex_with_script_pub_key_inserted =
-        unsigned_raw_transaction_with_pub_key_of_spending_vout.get_raw_string();
+    // ALT
+    // let unsigned_raw_transaction_with_pub_key_of_spending_vout = unsigned_raw_transaction.clone().replace_script_sig_hex_at_index(&script_pub_key_of_spending_vout, vout_index_to_sign);
+    // let unsigned_raw_transaction_hex_with_script_pub_key_inserted = unsigned_raw_transaction_with_pub_key_of_spending_vout.get_raw_string();
 
     // append sighash_all
     // Before signing, the transaction has a hash type constant temporarily appended. For a regular transaction, this is SIGHASH_ALL (0x00000001). After signing, this hash type is removed from the end of the transaction and appended to the scriptSig.
@@ -440,10 +439,15 @@ fn sign_p2pkh_transaction_with_one_input(
         signature_script,
         unsigned_raw_transaction_part_after_script_pub_key,
     );
-    let unsigned_raw_transaction_hex_with_script_pub_key_inserted = unsigned_raw_transaction
-        .clone()
-        .replace_script_sig_hex_at_index(&signature_script, vout_index_to_sign);
-    unsigned_raw_transaction_hex_with_script_pub_key_inserted.get_raw_string()
+    println!("------");
+    println!("{}", unsigned_raw_transaction_part_before_script_pub_key);
+    println!("{}", signature_script_length);
+    println!("{}", signature_script);
+    println!("{}", unsigned_raw_transaction_part_after_script_pub_key);
+    println!("------");
+    // let unsigned_raw_transaction_hex_with_script_pub_key_inserted = unsigned_raw_transaction.clone().replace_script_sig_hex_at_index(&signature_script, vout_index_to_sign);
+    // unsigned_raw_transaction_hex_with_script_pub_key_inserted.get_raw_string()
+    unsigned_raw_transaction_hex_with_script_pub_key_inserted
 }
 
 fn sign_transaction_with_bitcoin_lib(transaction_to_sign: &String, wif: &String) -> String {
@@ -558,21 +562,21 @@ fn get_script_language(script_hex: &String) -> String {
 
 fn main() {
     let pay_froms = vec![PayFrom {
-        transaction: "72e73ef29facc4c758a603c584465336892efb54a374e00711608cabaf544fb3".to_string(),
+        transaction: "ed0e4f8dc69b1a4ba14b878355e78d449f3e94bd58343684bf0b28d3df46a915".to_string(),
         vout_index: 0,
-        script_pub_key_hex_of_vout: "76a914e10319f137870564be80ad168106a5c542c1263388ac"
+        script_pub_key_hex_of_vout: "76a914744fdb2bb8873d7b281f11eacb91d8ad41903a8c88ac"
             .to_string(),
     }];
     let pay_tos = vec![PayTo {
-        address: "mjwM4pJLaYLAoGenBWdoUoVCccbM1jYqds".to_string(),
-        amount_in_sats: 6700,
+        address: "mjbX9Sg94mfHKrhkkVrVfmZRvMMyYBh2fr".to_string(),
+        amount_in_sats: 6507,
     }];
 
     let transaction = P2PKHTransaction::new(pay_froms.clone(), pay_tos.clone());
     let parts = transaction.get_parts();
     let transaction_to_sign = parts.get_raw_string();
 
-    let wif = "cTCAu1TDXUtS3eifJNd6KQvmpFUGiL29KwJiBCkMvb48PrtfUDri".to_string();
+    let wif = "cPYgEjvUjxJCLHh4oUNSJGUahRRj1R6MzXnEKjKYVqr6jHLknvCS".to_string();
     let bitcoin_lib_signature = sign_transaction_with_bitcoin_lib(&transaction_to_sign, &wif);
     let signature = sign_p2pkh_transaction_with_one_input(&transaction, &wif);
     println!("UNSIGNED transaction: \n{}", transaction_to_sign);
@@ -581,6 +585,7 @@ fn main() {
     println!();
     println!("Signature: \n{}", signature);
     println!();
+    println!("hsould be: \n{}", "010000000115a946dfd3280bbf84363458bd943e9f448de75583874ba14b1a9bc68d4f0eed000000006a47304402207d7d566d9e4ba917bb2cbf7a5a07eaf2289e245a319f079971096261c9e0291702203df7ddf9c0e43d06a0da6bdb90ad12bda134dd6ead6a4c6688807274889618eb012102758cf6d022985ddeaaf0d6bff2bf1bf326b5ed74330e94bfd9e6163de5a71f85fdffffff016b190000000000001976a9142cbd970ec1d60ff68d2fe82599223a86123b2e2888ac00000000")
     // assert_eq!(bitcoin_lib_signature, signature);
 }
 
