@@ -135,6 +135,14 @@ fn get_output_script_sig_for_p2pkh(public_key_hash: String) -> String {
     let public_key_hash_to_send_to = public_key_hash.to_string();
     create_p2pkh_script_pub_key_hex_from_pub_key_hash(&public_key_hash_to_send_to)
 }
+fn get_output_script_sig_for_p2sh(public_key_hash: &String) -> String {
+    let length = get_byte_length_of_hex(&public_key_hash);
+    // TODO: HARDCODING FOR NOW
+
+    let sh = format!("{}{}", length, public_key_hash.to_string());
+
+    create_p2sh_script_pub_key_hex_from_sh(&sh)
+}
 fn get_lock_time() -> String {
     "00000000".to_string()
 }
@@ -197,10 +205,18 @@ impl P2PKHTransaction {
                 .outputs
                 .iter()
                 .map(|output| {
-                    let public_key_hash = get_public_key_hash_from_address(&output.address);
+                    let address = &output.address;
+                    // TODO: DO BETTER ADDRESS TYPE CHECKING HERE! Maybe use bitcoin-address
+                    // package
+                    let is_p2sh_address = address.starts_with("2");
+                    let public_key_hash = get_public_key_hash_from_address(address);
                     P2PKHRawOutput {
                         amount_hex: get_output_amount(output.amount_in_sats),
-                        script_pub_key_hex: get_output_script_sig_for_p2pkh(public_key_hash),
+                        script_pub_key_hex: if is_p2sh_address {
+                            get_output_script_sig_for_p2sh(&public_key_hash)
+                        } else {
+                            get_output_script_sig_for_p2pkh(public_key_hash)
+                        },
                     }
                 })
                 .collect(),
@@ -533,6 +549,12 @@ fn create_p2pkh_script_pub_key_hex_from_pub_key_hash(pub_key_hash: &String) -> S
     let postfix = "88ac";
     format!("{}{}{}", prefix, pub_key_hash, postfix)
 }
+fn create_p2sh_script_pub_key_hex_from_sh(sh: &String) -> String {
+    // TODO: Why are these the prefix and postfix for a p2pkh script?
+    let prefix = "a9";
+    let postfix = "87";
+    format!("{}{}{}", prefix, sh, postfix)
+}
 
 // let sighash_components = bip143::SighashComponents::new(&unsigned_tx);
 
@@ -543,74 +565,38 @@ fn get_script_language(script_hex: &String) -> String {
 }
 
 fn main() {
-    let pay_froms = vec![
-        PayFrom {
-            transaction: "1e46d036303328e1d5af96784aaa155d7740591474ce88e8a1cafa0a331277c6"
-                .to_string(),
-            vout_index: 0,
-            script_pub_key_hex_of_vout: "76a91483217767e774a8acb7df7467204a787ca44077f288ac"
-                .to_string(),
-        },
-        PayFrom {
-            transaction: "26723350ee6e46221a10ffcaf478c25f2d3a39e6f8e44ab2cae9f4da33f86ad4"
-                .to_string(),
-            vout_index: 1,
-            script_pub_key_hex_of_vout: "76a914488aacd3e59754b9a714299249ace456b71927b988ac"
-                .to_string(),
-        },
-        PayFrom {
-            transaction: "dac1783f22566edab85cf7b1145ab8cd08bc2957d36e6b68b94ad4c222bdc6fa"
-                .to_string(),
-            vout_index: 0,
-            script_pub_key_hex_of_vout: "76a914017f2e4f39b39162ae536f24270021c982197adc88ac"
-                .to_string(),
-        },
-        PayFrom {
-            transaction: "fee9ae5bf9bf4c7c79bf31f8e8a502fdc343f20e44f538678a88ae3adf8a9396"
-                .to_string(),
-            vout_index: 0,
-            script_pub_key_hex_of_vout: "76a914f8a74b2613129e4fbd174852216a4d1d1992263d88ac"
-                .to_string(),
-        },
-    ];
+    let pay_froms = vec![PayFrom {
+        transaction: "97ab2e6039c829b0feafc8e78cf7dd9b7f86d3c5cd9e4c54ff0b22ab75b0e13c".to_string(),
+        vout_index: 0,
+        script_pub_key_hex_of_vout: "76a914f8a74b2613129e4fbd174852216a4d1d1992263d88ac"
+            .to_string(),
+    }];
     let pay_tos = vec![PayTo {
-        address: "n4BiHPS4kxus9TswxehsrhAwXacV9exJrm".to_string(),
-        amount_in_sats: 138638,
+        address: "2MuvJWP5uKxXLgUyTaTxjzSbDY6sR3H9jME".to_string(),
+        amount_in_sats: 138447,
     }];
 
     let transaction = P2PKHTransaction::new(pay_froms.clone(), pay_tos.clone());
     let parts = transaction.get_parts();
     let transaction_to_sign = parts.get_raw_string();
 
-    let wif_for_first_input = "cMfZwtqGDcPCFoiLvnkGcAvnFp3DxUYxUDYNPvbmZizf9XxHXaPV".to_string();
-    let wif_for_second_input = "cNw9uGe8mZyXBgrb9hcx892h4Uj8fjeTVbechBngzPPqdmdtsmPb".to_string();
-    let bitcoin_lib_signature = sign_transaction_with_bitcoin_lib(
-        &transaction,
-        &wif_for_first_input,
-        &wif_for_second_input,
-    );
+    // let wif_for_first_input = "cMfZwtqGDcPCFoiLvnkGcAvnFp3DxUYxUDYNPvbmZizf9XxHXaPV".to_string();
+    // let wif_for_second_input = "cNw9uGe8mZyXBgrb9hcx892h4Uj8fjeTVbechBngzPPqdmdtsmPb".to_string();
+    // let bitcoin_lib_signature = sign_transaction_with_bitcoin_lib(
+    //     &transaction,
+    //     &wif_for_first_input,
+    //     &wif_for_second_input,
+    // );
     let mut wifs: HashMap<u64, String> = HashMap::new();
     wifs.insert(
         0,
-        "cVtXMbcuND4eBjHUz6RrWz52N5Uw38sKMhacJHvuBV2uGb3Tb3rn".to_string(),
-    );
-    wifs.insert(
-        1,
-        "cQrB3ztP9nTz5F7auk8KeR1LBybn2Pby1TB4VPh4QYprM9eHi1xV".to_string(),
-    );
-    wifs.insert(
-        2,
-        "cUrKYXx5nQ6FqFdqfNTbEUaMRfw31uTBr2dcs4X6MLMVhu2cwMEr".to_string(),
-    );
-    wifs.insert(
-        3,
-        "cNx7NuBsJZemqzEoCvrysZdJYjmDfwGSYrd3Sd8YSJhBiwCZRf1o".to_string(),
+        "cSYMJxgaNbRqUGecNQX8b7NcqsHT1Lm4bH4SJaL3RS1t4pEJQJFy".to_string(),
     );
 
     let signature = sign_p2pkh_transaction_with_one_input(&transaction, wifs);
     println!("UNSIGNED transaction: \n{}", transaction_to_sign);
     println!();
-    println!("Signature (bitcoin lib): \n{}", bitcoin_lib_signature);
+    // println!("Signature (bitcoin lib): \n{}", bitcoin_lib_signature);
     println!();
     println!("Signature: \n{}", signature);
     println!();
