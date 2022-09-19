@@ -14,13 +14,16 @@ use bitcoin_hd_keys::{
 use sha2::{Digest, Sha256};
 // Sources:
 // - http://www.righto.com/2014/02/bitcoins-hard-way-using-raw-bitcoin.html
+// - https://medium.com/@bitaps.com/exploring-bitcoin-signing-the-p2pkh-input-b8b4d5c4809c
 // - https://bitcoin.stackexchange.com/questions/3374/how-to-redeem-a-basic-tx
 // - https://en.bitcoin.it/wiki/Transaction
 // - https://en.bitcoin.it/wiki/Protocol_documentation
 // - https://developer.bitcoin.org/reference/transactions.html#:~:text=Bitcoin%20transactions%20are%20broadcast%20between,part%20of%20the%20consensus%20rules.
 // - https://thunderbiscuit.com/posts/transactions-legacy/
 // - https://medium.com/@ottosch/manually-creating-and-signing-a-bitcoin-transaction-87fbbfe46033
-// - https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526
+// https://medium.com/@ottosch/manually-creating-and-signing-a-bitcoin-transaction-87fbbfe46032
+// https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526a
+// - https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526a
 //
 // Can check work here: https://bc-2.jp/tools/txeditor2.html
 //
@@ -128,7 +131,7 @@ fn get_output_script_length(output_script_pub_key_hex: &String) -> String {
     // script_length_bytes_in_hex
     get_byte_length_of_hex(output_script_pub_key_hex)
 }
-fn get_output_script_sig(public_key_hash: String) -> String {
+fn get_output_script_sig_for_p2pkh(public_key_hash: String) -> String {
     let public_key_hash_to_send_to = public_key_hash.to_string();
     create_p2pkh_script_pub_key_hex_from_pub_key_hash(&public_key_hash_to_send_to)
 }
@@ -160,9 +163,11 @@ struct P2PKHTransaction {
 impl P2PKHTransaction {
     fn new(inputs: Vec<PayFrom>, outputs: Vec<PayTo>) -> Self {
         P2PKHTransaction {
+            // TODO: Shouldn't hardcode this
             version: 1,
             inputs,
             outputs,
+            // TODO: Shouldn't hardcode this
             locktime: "00000000".to_string(),
         }
     }
@@ -183,7 +188,7 @@ impl P2PKHTransaction {
                         ),
                         // TODO: Hardcoding this for unsigned transactions
                         script_sig_hex: "".to_string(),
-                        // TODO: Hardcoding for now
+                        // TODO: Shouldn't hardcode this
                         sequence_hex: get_sequence("fdffffff"),
                     }
                 })
@@ -195,7 +200,7 @@ impl P2PKHTransaction {
                     let public_key_hash = get_public_key_hash_from_address(&output.address);
                     P2PKHRawOutput {
                         amount_hex: get_output_amount(output.amount_in_sats),
-                        script_pub_key_hex: get_output_script_sig(public_key_hash),
+                        script_pub_key_hex: get_output_script_sig_for_p2pkh(public_key_hash),
                     }
                 })
                 .collect(),
