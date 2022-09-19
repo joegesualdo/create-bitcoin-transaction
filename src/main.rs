@@ -136,19 +136,20 @@ fn get_lock_time() -> String {
     "00000000".to_string()
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct PayFrom {
     transaction: String,
     vout_index: u64,
     script_pub_key_hex_of_vout: String,
     // pub_key_hash_hex_of_receiver: String,
 }
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct PayTo {
     address: String,
     amount_in_sats: u64,
 }
 
+#[derive(Debug, Clone)]
 struct P2PKHTransaction {
     version: u8,
     inputs: Vec<PayFrom>,
@@ -203,7 +204,7 @@ impl P2PKHTransaction {
         }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct P2PKHRawInput {
     previous_transaction_hash_hex: String,
     previous_transaction_output_index_hex: String,
@@ -224,8 +225,22 @@ impl P2PKHRawInput {
             self.sequence_hex
         )
     }
+    fn replace_script_sig_hex(self, new_script_sig_hex: String) -> Self {
+        let Self {
+            previous_transaction_hash_hex,
+            previous_transaction_output_index_hex,
+            sequence_hex,
+            ..
+        } = self;
+        Self {
+            previous_transaction_hash_hex,
+            previous_transaction_output_index_hex,
+            sequence_hex,
+            script_sig_hex: new_script_sig_hex,
+        }
+    }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct P2PKHRawOutput {
     amount_hex: String,
     script_pub_key_hex: String,
@@ -243,7 +258,7 @@ impl P2PKHRawOutput {
         )
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct P2PKHRawTransaction {
     version_hex: String,
     inputs: Vec<P2PKHRawInput>,
@@ -278,38 +293,29 @@ impl P2PKHRawTransaction {
     fn get_outputs_count_hex(&self) -> String {
         get_output_count(self.inputs.len() as u64)
     }
-}
-
-fn main() {
-    let pay_froms = vec![PayFrom {
-        transaction: "72e73ef29facc4c758a603c584465336892efb54a374e00711608cabaf544fb3".to_string(),
-        vout_index: 0,
-        script_pub_key_hex_of_vout: "76a914e10319f137870564be80ad168106a5c542c1263388ac"
-            .to_string(),
-        // Corresponding public key (not hashed): 02cc65acf65de73f023eeb43d15f5203dc39556ccff1d261ba0ec6530f14b86ec2
-        // Corresponding wif: cURSuw4bwH6sxKi936DvxLncT6V5oiSz9oi6W9mP4VRqoosXJopY
-        // pub_key_hash_hex_of_receiver: "e10319f137870564be80ad168106a5c542c12633".to_string(),
-    }];
-    let pay_tos = vec![
-        // m/44'/1'/0'/0/4 muFWn6AhQE9Snp2jLr7xqDjtw1vAkJuoZa     96a638a9e0687505f3699b8f5dcc2c94ba329d0d          cUTzJbbFAjgCQVb1P9KnhNKdiZkjSr6RvTSCaFKT8EGmsuJ4pYsY
-        PayTo {
-            address: "mjwM4pJLaYLAoGenBWdoUoVCccbM1jYqds".to_string(),
-            amount_in_sats: 6700,
-        },
-        // PayTo {
-        //     public_key_hash: "fe8c68f718a4fa75279f98bf79fae75ed779ae24".to_string(),
-        //     amount_in_btc: 0.00001,
-        // },
-    ];
-
-    let transaction = P2PKHTransaction::new(pay_froms.clone(), pay_tos.clone());
-    let parts = transaction.get_parts();
-    let transaction_to_sign = parts.get_raw_string();
-    println!("UNSIGNED: {}", transaction_to_sign);
-    let wif = "cTCAu1TDXUtS3eifJNd6KQvmpFUGiL29KwJiBCkMvb48PrtfUDri".to_string();
-    let sig = sign_transaction_with_bitcoin_lib(&transaction_to_sign, &wif);
-    println!("signatureeee! {}", sig);
-    sign_p2pkh_transaction_with_one_input(&transaction, &wif);
+    fn replace_script_sig_hex_at_index(self, new_script_sig_hex: &String, at_index: usize) -> Self {
+        let inputs = self.inputs;
+        // functional way to replace at index
+        let new_inputs = inputs
+            .into_iter()
+            .enumerate()
+            .map(|(index, raw_input)| {
+                if index == at_index {
+                    let new_raw_input = P2PKHRawInput {
+                        script_sig_hex: new_script_sig_hex.to_string(),
+                        ..raw_input
+                    };
+                    new_raw_input
+                } else {
+                    raw_input
+                }
+            })
+            .collect();
+        Self {
+            inputs: new_inputs,
+            ..self
+        }
+    }
 }
 
 fn sign_segwith_transaction() {
@@ -317,7 +323,10 @@ fn sign_segwith_transaction() {
     todo!()
 }
 
-fn sign_p2pkh_transaction_with_one_input(transaction_to_sign: &P2PKHTransaction, wif: &String) {
+fn sign_p2pkh_transaction_with_one_input(
+    transaction_to_sign: &P2PKHTransaction,
+    wif: &String,
+) -> String {
     // Source: https://medium.com/@bitaps.com/exploring-bitcoin-signing-the-p2pkh-input-b8b4d5c4809c
     let vout_index_to_sign = 0;
     let vout = &transaction_to_sign.inputs[vout_index_to_sign];
@@ -336,10 +345,6 @@ fn sign_p2pkh_transaction_with_one_input(transaction_to_sign: &P2PKHTransaction,
         raw_input.previous_transaction_hash_hex,
         raw_input.previous_transaction_output_index_hex
     );
-    println!(
-        "before: {}",
-        unsigned_raw_transaction_part_before_script_pub_key
-    );
     let unsigned_raw_transaction_part_after_script_pub_key = format!(
         "{}{}{}{}",
         raw_input.sequence_hex,
@@ -352,10 +357,6 @@ fn sign_p2pkh_transaction_with_one_input(transaction_to_sign: &P2PKHTransaction,
             }),
         raw_transaction.locktime_hex,
     );
-    println!(
-        "after: {}",
-        unsigned_raw_transaction_part_after_script_pub_key
-    );
 
     let script_pub_key_placeholder = "00";
 
@@ -365,7 +366,10 @@ fn sign_p2pkh_transaction_with_one_input(transaction_to_sign: &P2PKHTransaction,
         script_pub_key_placeholder,
         unsigned_raw_transaction_part_after_script_pub_key
     );
-    println!("unsigned_trnsaction: {}", unsigned_raw_transaction_hex);
+    //let unsigned_raw_transaction = transaction_to_sign.get_parts();
+    //
+    let unsigned_raw_transaction = transaction_to_sign.get_parts();
+    let unsigned_raw_transaction_hex = unsigned_raw_transaction.get_raw_string();
 
     let script_pub_key_of_spending_vout_len =
         get_byte_length_of_hex(&script_pub_key_of_spending_vout);
@@ -373,12 +377,18 @@ fn sign_p2pkh_transaction_with_one_input(transaction_to_sign: &P2PKHTransaction,
         "{}{}",
         script_pub_key_of_spending_vout_len, script_pub_key_of_spending_vout
     );
+
     let unsigned_raw_transaction_hex_with_script_pub_key_inserted = format!(
         "{}{}{}",
         unsigned_raw_transaction_part_before_script_pub_key,
         script_pub_key_of_spending_vout_with_length_byte,
         unsigned_raw_transaction_part_after_script_pub_key,
     );
+    let unsigned_raw_transaction_with_pub_key_of_spending_vout = unsigned_raw_transaction
+        .clone()
+        .replace_script_sig_hex_at_index(&script_pub_key_of_spending_vout, vout_index_to_sign);
+    let unsigned_raw_transaction_hex_with_script_pub_key_inserted =
+        unsigned_raw_transaction_with_pub_key_of_spending_vout.get_raw_string();
 
     // append sighash_all
     // Before signing, the transaction has a hash type constant temporarily appended. For a regular transaction, this is SIGHASH_ALL (0x00000001). After signing, this hash type is removed from the end of the transaction and appended to the scriptSig.
@@ -387,7 +397,6 @@ fn sign_p2pkh_transaction_with_one_input(transaction_to_sign: &P2PKHTransaction,
     let sighash_type_hex_of_4_bytes = convert_decimal_to_hexadecimal(sighash_type, false, Some(4));
     let sighash_type_hex_in_little_endian =
         convert_big_endian_hex_to_little_endian(&sighash_type_hex_of_4_bytes);
-    println!("{}", sighash_type_hex_in_little_endian);
     let input_0_sighash_all_preimage = format!(
         "{}{}",
         unsigned_raw_transaction_hex_with_script_pub_key_inserted,
@@ -395,21 +404,17 @@ fn sign_p2pkh_transaction_with_one_input(transaction_to_sign: &P2PKHTransaction,
     );
 
     let transaction_double_sha_256 = double_sha256(&input_0_sighash_all_preimage);
-    println!("s256: {}", transaction_double_sha_256);
 
     let secp = Secp256k1::new();
     let msg = Message::from_slice(&decode_hex(&transaction_double_sha_256).unwrap()).unwrap();
 
     let private_key = PrivateKey::from_wif(&wif).unwrap();
     let private_key_hex = convert_wif_to_private_key(&wif);
-    println!("privk: {}", private_key_hex);
     let public_key = private_key.public_key(&secp);
     let public_key_hex = public_key.to_string();
-    println!("pk: {}", public_key_hex);
 
     let secret_key = SecretKey::from_str(&private_key_hex).unwrap();
-    let mut signature = secp.sign_ecdsa(&msg, &secret_key).serialize_der();
-    println!("sig: {}", signature);
+    let signature = secp.sign_ecdsa(&msg, &secret_key).serialize_der();
 
     // this should be calculated
     let sighash_type_hex_of_1_byte = convert_decimal_to_hexadecimal(sighash_type, false, Some(1));
@@ -427,6 +432,7 @@ fn sign_p2pkh_transaction_with_one_input(transaction_to_sign: &P2PKHTransaction,
         public_key_hex
     );
     let signature_script_length = get_byte_length_of_hex(&signature_script);
+    // let signed_raw_transaction = unsigned_raw_transaction.replace_script_sig_hex_at_index(&signature_script, vout_index_to_sign);
     let unsigned_raw_transaction_hex_with_script_pub_key_inserted = format!(
         "{}{}{}{}",
         unsigned_raw_transaction_part_before_script_pub_key,
@@ -434,14 +440,10 @@ fn sign_p2pkh_transaction_with_one_input(transaction_to_sign: &P2PKHTransaction,
         signature_script,
         unsigned_raw_transaction_part_after_script_pub_key,
     );
-    println!("HEERRRREEE");
-    println!("private_key: {}", private_key_hex);
-    println!("wif: {}", wif);
-    println!("unsigned: {}", unsigned_raw_transaction_hex,);
-    println!(
-        "signed: {}",
-        unsigned_raw_transaction_hex_with_script_pub_key_inserted
-    )
+    let unsigned_raw_transaction_hex_with_script_pub_key_inserted = unsigned_raw_transaction
+        .clone()
+        .replace_script_sig_hex_at_index(&signature_script, vout_index_to_sign);
+    unsigned_raw_transaction_hex_with_script_pub_key_inserted.get_raw_string()
 }
 
 fn sign_transaction_with_bitcoin_lib(transaction_to_sign: &String, wif: &String) -> String {
@@ -515,14 +517,11 @@ fn sign_transaction_with_bitcoin_lib(transaction_to_sign: &String, wif: &String)
 
     let private_key = PrivateKey::from_wif(wif).unwrap();
     let private_key_hex = convert_wif_to_private_key(wif);
-    println!("privk: {}", private_key_hex);
     let public_key = private_key.public_key(&secp);
     let public_key_hex = public_key.to_string();
-    println!("pk: {}", public_key_hex);
 
     let secret_key = SecretKey::from_str(&private_key_hex).unwrap();
     let mut signature = secp.sign_ecdsa(&msg, &secret_key).serialize_der();
-    println!("sig: {}", signature);
 
     let mut signature_bytes = signature.to_vec();
     signature_bytes.push(hash_type as u8);
@@ -539,12 +538,7 @@ fn sign_transaction_with_bitcoin_lib(transaction_to_sign: &String, wif: &String)
 
     let serialized = raw_tx.serialize();
 
-    println!("serialized: {:?}", serialized);
-    println!("serialized: {:?}", encode_hex(&serialized));
-    println!("txHash: {:?}", raw_tx.txid());
     return encode_hex(&serialized);
-
-    //sig.push(1); // sign hash type
 }
 
 fn create_p2pkh_script_pub_key_hex_from_pub_key_hash(pub_key_hash: &String) -> String {
@@ -560,6 +554,34 @@ fn get_script_language(script_hex: &String) -> String {
     let script_hex_bytes = decode_hex(script_hex).unwrap();
     let s = Script::from(script_hex_bytes);
     s.asm()
+}
+
+fn main() {
+    let pay_froms = vec![PayFrom {
+        transaction: "72e73ef29facc4c758a603c584465336892efb54a374e00711608cabaf544fb3".to_string(),
+        vout_index: 0,
+        script_pub_key_hex_of_vout: "76a914e10319f137870564be80ad168106a5c542c1263388ac"
+            .to_string(),
+    }];
+    let pay_tos = vec![PayTo {
+        address: "mjwM4pJLaYLAoGenBWdoUoVCccbM1jYqds".to_string(),
+        amount_in_sats: 6700,
+    }];
+
+    let transaction = P2PKHTransaction::new(pay_froms.clone(), pay_tos.clone());
+    let parts = transaction.get_parts();
+    let transaction_to_sign = parts.get_raw_string();
+
+    let wif = "cTCAu1TDXUtS3eifJNd6KQvmpFUGiL29KwJiBCkMvb48PrtfUDri".to_string();
+    let bitcoin_lib_signature = sign_transaction_with_bitcoin_lib(&transaction_to_sign, &wif);
+    let signature = sign_p2pkh_transaction_with_one_input(&transaction, &wif);
+    println!("UNSIGNED transaction: \n{}", transaction_to_sign);
+    println!();
+    println!("Signature (bitcoin lib): \n{}", bitcoin_lib_signature);
+    println!();
+    println!("Signature: \n{}", signature);
+    println!();
+    // assert_eq!(bitcoin_lib_signature, signature);
 }
 
 // fn sign_with_pubkey_hash(pub_key_hash: &String, wif: &String) -> () {
