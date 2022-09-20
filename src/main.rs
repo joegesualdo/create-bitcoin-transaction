@@ -6,7 +6,7 @@ use bitcoin::{
     hashes::{self, sha256, Hash},
     psbt::serialize::Serialize,
     secp256k1::{Message, Secp256k1, SecretKey},
-    OutPoint, PrivateKey, Script, Transaction, TxIn, TxOut, Witness,
+    OutPoint, PrivateKey, Script, Transaction as BitcoinLibTransaction, TxIn, TxOut, Witness,
 };
 use bitcoin_hd_keys::{
     convert_wif_to_private_key, double_sha256, get_public_key_hash_from_address,
@@ -36,15 +36,19 @@ use hex_utilities::{
     encode_hex, get_text_for_hex,
 };
 
+fn is_segwit_transaction() {
+    // If a transaction has at least one SegWit input, native or wrapped, then it’s a SegWit transaction. Such transactions are serialized differently from legacy ones. Actually, it’s a little more complex, because we have one format for signing and a whole different one for pushing.
+    todo!()
+}
 fn get_version(version: u8) -> String {
-    if version != 1 {
+    if version > 2 {
         panic!("Version not supported")
     }
     // currently version 1
     // https://en.bitcoin.it/wiki/Transaction
-    let version = "00000001".to_string();
+    let hex = convert_decimal_to_hexadecimal(version as u64, false, Some(4));
 
-    let little_endian_version_hex = convert_big_endian_hex_to_little_endian(&version);
+    let little_endian_version_hex = convert_big_endian_hex_to_little_endian(&hex);
     little_endian_version_hex
 }
 
@@ -143,6 +147,12 @@ fn get_output_script_sig_for_p2sh(public_key_hash: &String) -> String {
 
     create_p2sh_script_pub_key_hex_from_sh(&sh)
 }
+fn get_output_script_sig_for_p2wpkh(public_key_hash: &String) -> String {
+    let length = get_byte_length_of_hex(&public_key_hash);
+
+    let length_with_public_key_hash = format!("{}{}", length, public_key_hash.to_string());
+    create_p2wpkh_script_pub_key_hex_from_pub_key_hash(&length_with_public_key_hash)
+}
 fn get_lock_time() -> String {
     "00000000".to_string()
 }
@@ -152,7 +162,7 @@ struct PayFrom {
     transaction: String,
     vout_index: u64,
     script_pub_key_hex_of_vout: String,
-    // pub_key_hash_hex_of_receiver: String,
+    vout_is_segwit: bool, // native or wrapped,
 }
 #[derive(Debug, Clone)]
 struct PayTo {
@@ -160,7 +170,81 @@ struct PayTo {
     amount_in_sats: u64,
 }
 
+enum Transaction {
+    V1(P2PKHTransaction),
+    V2(V2Transaction),
+}
+
 #[derive(Debug, Clone)]
+// TODO: This should be named LegacyTransaction
+struct V2Transaction {
+    version: u8,
+    inputs: Vec<PayFrom>,
+    outputs: Vec<PayTo>,
+    locktime: String,
+}
+
+impl V2Transaction {
+    fn new(inputs: Vec<PayFrom>, outputs: Vec<PayTo>) -> Self {
+        V2Transaction {
+            // TODO: Shouldn't hardcode this
+            version: 2,
+            inputs,
+            outputs,
+            // TODO: Shouldn't hardcode this
+            locktime: "00000000".to_string(),
+        }
+    }
+
+    fn get_parts(&self) -> P2PKHRawTransaction {
+        P2PKHRawTransaction {
+            version_hex: get_version(self.version),
+            inputs: self
+                .inputs
+                .iter()
+                .map(|input| {
+                    P2PKHRawInput {
+                        previous_transaction_hash_hex: input.transaction.clone(),
+                        previous_transaction_output_index_hex: get_prev_transaction_output_index(
+                            input.vout_index,
+                        ),
+                        // TODO: Hardcoding this for unsigned transactions
+                        script_sig_hex: "".to_string(),
+                        // TODO: Shouldn't hardcode this
+                        sequence_hex: get_sequence("ffffffff"),
+                    }
+                })
+                .collect(),
+            outputs: self
+                .outputs
+                .iter()
+                .map(|output| {
+                    let address = &output.address;
+                    // TODO: DO BETTER ADDRESS TYPE CHECKING HERE! Maybe use bitcoin-address
+                    // package
+                    let is_p2sh_address = address.starts_with("2");
+                    let is_p2wpkh_address = address.starts_with("tb1");
+                    let public_key_hash = get_public_key_hash_from_address(address);
+                    P2PKHRawOutput {
+                        amount_hex: get_output_amount(output.amount_in_sats),
+                        script_pub_key_hex: if is_p2sh_address {
+                            get_output_script_sig_for_p2sh(&public_key_hash)
+                        } else if is_p2wpkh_address {
+                            get_output_script_sig_for_p2wpkh(&public_key_hash)
+                        } else {
+                            get_output_script_sig_for_p2pkh(public_key_hash)
+                        },
+                    }
+                })
+                .collect(),
+            // TODO: Hardcoded
+            locktime_hex: self.locktime.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+// TODO: This should be named V1Transaction
 struct P2PKHTransaction {
     version: u8,
     inputs: Vec<PayFrom>,
@@ -197,7 +281,7 @@ impl P2PKHTransaction {
                         // TODO: Hardcoding this for unsigned transactions
                         script_sig_hex: "".to_string(),
                         // TODO: Shouldn't hardcode this
-                        sequence_hex: get_sequence("fdffffff"),
+                        sequence_hex: get_sequence("ffffffff"),
                     }
                 })
                 .collect(),
@@ -209,11 +293,14 @@ impl P2PKHTransaction {
                     // TODO: DO BETTER ADDRESS TYPE CHECKING HERE! Maybe use bitcoin-address
                     // package
                     let is_p2sh_address = address.starts_with("2");
+                    let is_p2wpkh_address = address.starts_with("tb1");
                     let public_key_hash = get_public_key_hash_from_address(address);
                     P2PKHRawOutput {
                         amount_hex: get_output_amount(output.amount_in_sats),
                         script_pub_key_hex: if is_p2sh_address {
                             get_output_script_sig_for_p2sh(&public_key_hash)
+                        } else if is_p2wpkh_address {
+                            get_output_script_sig_for_p2wpkh(&public_key_hash)
                         } else {
                             get_output_script_sig_for_p2pkh(public_key_hash)
                         },
@@ -343,13 +430,26 @@ impl P2PKHRawTransaction {
     }
 }
 
-fn sign_segwith_transaction() {
+fn sign_segwit_transaction(transaction_to_sign: &V2Transaction, wifs: HashMap<u64, String>) {
     // Source: https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526a
-    todo!()
+    let unsigned_raw_transaction = transaction_to_sign.get_parts();
+
+    let mut signature_scripts: HashMap<u64, String> = HashMap::new();
+    for (index, input) in transaction_to_sign.inputs.iter().enumerate() {
+        if !input.vout_is_segwit {
+            let signature_script = get_signiture_script_for_input_at_index(
+                &Transaction::V2(transaction_to_sign.clone()),
+                index,
+                &wifs[&(index as u64)],
+            );
+            signature_scripts.insert(index as u64, signature_script);
+        }
+    }
+    println!("{:#?}", signature_scripts)
 }
 
-fn sign_p2pkh_transaction_with_one_input(
-    transaction_to_sign: &P2PKHTransaction,
+fn sign_p2pkh_transaction(
+    transaction_to_sign: P2PKHTransaction,
     wifs: HashMap<u64, String>,
 ) -> String {
     // Source: https://medium.com/@bitaps.com/exploring-bitcoin-signing-the-p2pkh-input-b8b4d5c4809c
@@ -360,7 +460,7 @@ fn sign_p2pkh_transaction_with_one_input(
     let mut signature_scripts: HashMap<u64, String> = HashMap::new();
     for (index, input) in transaction_to_sign.inputs.iter().enumerate() {
         let signature_script = get_signiture_script_for_input_at_index(
-            transaction_to_sign,
+            &Transaction::V1(transaction_to_sign.clone()),
             index,
             &wifs[&(index as u64)],
         );
@@ -381,17 +481,26 @@ fn sign_p2pkh_transaction_with_one_input(
     // 010000000169e54d128ac30ad992f3b353653fb33d5fc4c1e4473b49c7f9e34e7d31312354000000006b483045022100865995094fe7f65cbbedb2bc0e6032d69caf2ef20cc4ba28eef1b136accb911602202c23bc767c4707f19d643008c0c28cede4240a711127bd
 }
 fn get_signiture_script_for_input_at_index(
-    transaction_to_sign: &P2PKHTransaction,
+    transaction_to_sign: &Transaction,
     input_index_to_sign: usize,
     wif: &String,
 ) -> String {
     let vout_index_to_sign = input_index_to_sign;
-    let vout = &transaction_to_sign.inputs[vout_index_to_sign];
+    let vout = match &transaction_to_sign {
+        Transaction::V1(p2pkh_transaction) => &p2pkh_transaction.inputs[vout_index_to_sign],
+        Transaction::V2(v2_transaction) => &v2_transaction.inputs[vout_index_to_sign],
+    };
     let script_pub_key_of_spending_vout = &vout.script_pub_key_hex_of_vout;
-    let unsigned_raw_transaction_with_pub_key_of_spending_vout = transaction_to_sign
-        .get_parts()
-        .clone()
-        .replace_script_sig_hex_at_index(&script_pub_key_of_spending_vout, &vout_index_to_sign);
+    let unsigned_raw_transaction_with_pub_key_of_spending_vout = match &transaction_to_sign {
+        Transaction::V1(p2pkh_transaction) => p2pkh_transaction
+            .get_parts()
+            .clone()
+            .replace_script_sig_hex_at_index(&script_pub_key_of_spending_vout, &vout_index_to_sign),
+        Transaction::V2(v2_transaction) => v2_transaction
+            .get_parts()
+            .clone()
+            .replace_script_sig_hex_at_index(&script_pub_key_of_spending_vout, &vout_index_to_sign),
+    };
     let unsigned_raw_transaction_hex_with_script_pub_key_inserted =
         unsigned_raw_transaction_with_pub_key_of_spending_vout.get_raw_string();
 
@@ -407,6 +516,7 @@ fn get_signiture_script_for_input_at_index(
         unsigned_raw_transaction_hex_with_script_pub_key_inserted,
         sighash_type_hex_in_little_endian
     );
+    println!("HERE!! {}", input_0_sighash_all_preimage);
 
     let transaction_double_sha_256 = double_sha256(&input_0_sighash_all_preimage);
 
@@ -474,7 +584,7 @@ fn sign_transaction_with_bitcoin_lib(
 
     let transaction_input = &transaction.inputs[input_index];
     let transaction_output = &transaction.outputs[0];
-    let mut raw_tx = Transaction {
+    let mut raw_tx = BitcoinLibTransaction {
         version: 1,
         lock_time: bitcoin::PackedLockTime(0),
         input: vec![TxIn {
@@ -555,6 +665,11 @@ fn create_p2sh_script_pub_key_hex_from_sh(sh: &String) -> String {
     let postfix = "87";
     format!("{}{}{}", prefix, sh, postfix)
 }
+fn create_p2wpkh_script_pub_key_hex_from_pub_key_hash(pub_key_hash: &String) -> String {
+    // TODO: Why are these the prefix and postfix for a p2pkh script?
+    let prefix = "00";
+    format!("{}{}", prefix, pub_key_hash)
+}
 
 // let sighash_components = bip143::SighashComponents::new(&unsigned_tx);
 
@@ -564,12 +679,13 @@ fn get_script_language(script_hex: &String) -> String {
     s.asm()
 }
 
-fn main() {
+fn legacy_transaction() {
     let pay_froms = vec![PayFrom {
         transaction: "97ab2e6039c829b0feafc8e78cf7dd9b7f86d3c5cd9e4c54ff0b22ab75b0e13c".to_string(),
         vout_index: 0,
         script_pub_key_hex_of_vout: "76a914f8a74b2613129e4fbd174852216a4d1d1992263d88ac"
             .to_string(),
+        vout_is_segwit: false,
     }];
     let pay_tos = vec![PayTo {
         address: "2MuvJWP5uKxXLgUyTaTxjzSbDY6sR3H9jME".to_string(),
@@ -590,10 +706,10 @@ fn main() {
     let mut wifs: HashMap<u64, String> = HashMap::new();
     wifs.insert(
         0,
-        "cSYMJxgaNbRqUGecNQX8b7NcqsHT1Lm4bH4SJaL3RS1t4pEJQJFy".to_string(),
+        "cNx7NuBsJZemqzEoCvrysZdJYjmDfwGSYrd3Sd8YSJhBiwCZRf1o".to_string(),
     );
 
-    let signature = sign_p2pkh_transaction_with_one_input(&transaction, wifs);
+    let signature = sign_p2pkh_transaction(transaction, wifs);
     println!("UNSIGNED transaction: \n{}", transaction_to_sign);
     println!();
     // println!("Signature (bitcoin lib): \n{}", bitcoin_lib_signature);
@@ -601,6 +717,73 @@ fn main() {
     println!("Signature: \n{}", signature);
     println!();
     // assert_eq!(bitcoin_lib_signature, signature);
+}
+fn segwit_transaction() {
+    let pay_froms = vec![
+        //legacy
+        PayFrom {
+            transaction: "ed204affc7519dfce341db0569687569d12b1520a91a9824531c038ad62aa9d1"
+                .to_string(),
+            vout_index: 1,
+            script_pub_key_hex_of_vout: "76a914b780d54c6b03b053916333b50a213d566bbedd1388ac"
+                .to_string(),
+            vout_is_segwit: false,
+        },
+        // native segwit
+        PayFrom {
+            transaction: "9cb872539fbe1bc0b9c5562195095f3f35e6e13919259956c6263c9bd53b20b7"
+                .to_string(),
+            vout_index: 1,
+            // Don't need because it's a segwit input
+            script_pub_key_hex_of_vout: "".to_string(),
+            vout_is_segwit: true,
+        },
+        //nested_segwit
+        PayFrom {
+            transaction: "8012f1ec8aa9a63cf8b200c25ddae2dece42a2495cc473c1758972cfcd84d904"
+                .to_string(),
+            vout_index: 1,
+            // Don't need because it's a segwit input
+            script_pub_key_hex_of_vout: "".to_string(),
+            vout_is_segwit: true,
+        },
+    ];
+    let pay_tos = vec![PayTo {
+        address: "tb1qeds7u3tgpqkttxkzdwukaj8muqgf5nqq6w05ak".to_string(),
+        amount_in_sats: 16089269,
+    }];
+
+    let transaction = V2Transaction::new(pay_froms.clone(), pay_tos.clone());
+    let parts = transaction.get_parts();
+    let transaction_to_sign = parts.get_raw_string();
+    println!("UNSIGNED transaction: \n{}", transaction_to_sign);
+
+    let mut wifs: HashMap<u64, String> = HashMap::new();
+    wifs.insert(
+        0,
+        "cUxM1d52z426Mr8EPQMhSJyKYRWNhJh17SQ6DQ6feGPsJnAEH6dT".to_string(),
+    );
+    wifs.insert(
+        1,
+        "cNtTKNbNhz94XesU5cNhTtZ9E2QgGTDNgXjCHkYYKZaLZgmP3wKL".to_string(),
+    );
+    wifs.insert(
+        2,
+        "cUrhNhmnpFBrKAfrrwSxnrk9XiDxtiigDG5phTKtbtY88rkgyMGv".to_string(),
+    );
+
+    let signature = sign_segwit_transaction(&transaction, wifs);
+    //println!();
+    //// println!("Signature (bitcoin lib): \n{}", bitcoin_lib_signature);
+    //println!();
+    //println!("Signature: \n{}", signature);
+    //println!();
+    // assert_eq!(bitcoin_lib_signature, signature);
+}
+
+fn main() {
+    // legacy_transaction()
+    segwit_transaction()
 }
 
 // fn sign_with_pubkey_hash(pub_key_hash: &String, wif: &String) -> () {
