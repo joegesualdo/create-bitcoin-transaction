@@ -883,23 +883,23 @@ fn sign_segwit_transaction(transaction_to_sign: &SegwitTransaction, wifs: HashMa
     let serialized_signature = double_sha256_and_sign_hex(&sighash_all_preimage, &wif);
 
 
-        // TODO: REMOVE!!
-        if bitcoin_address::is_segwit_native(&input_to_sign.address) {
-            let sighash_all_preimage_from_article = "0200000099197e88ff743aff3e453e3a7b745abd31937ccbd56f96a179266eba786833e682a7d5bb59fc957ff7f737ca0b8be713c705d6173783ad5edb067819bed70be89cb872539fbe1bc0b9c5562195095f3f35e6e13919259956c6263c9bd53b20b7010000001976a914594c2e3da92d1904f7e7c856220f8cae5efb556488ac5424000000000000fffffffff3ae23c3fd63a2e0479888f95c7a8ab221b20add6ac819e9d8953edd1a0cd9240000000001000000";
-        assert_eq!(sighash_all_preimage, sighash_all_preimage_from_article);
-        } else if bitcoin_address::is_nested_segwit(&input_to_sign.address) {
-            let sighash_all_preimage_from_article = "0200000099197e88ff743aff3e453e3a7b745abd31937ccbd56f96a179266eba786833e682a7d5bb59fc957ff7f737ca0b8be713c705d6173783ad5edb067819bed70be88012f1ec8aa9a63cf8b200c25ddae2dece42a2495cc473c1758972cfcd84d904010000001976a9146a721dcca372f3c17b2c649b2ba61aa0fda98a9188ac1199f40000000000fffffffff3ae23c3fd63a2e0479888f95c7a8ab221b20add6ac819e9d8953edd1a0cd9240000000001000000";
-            assert_eq!(sighash_all_preimage, sighash_all_preimage_from_article);
-        } else {
-            todo!()
-        }
-    let serialized_signature = if bitcoin_address::is_segwit_native(&input_to_sign.address) {
-        "3045022100f8dac321b0429798df2952d086e763dd5b374d031c7f400d92370ae3c5f57afd0220531207b28b1b137573941c7b3cf5384a3658ef5fc238d26150d8f75b2bcc61e7".to_string()
-    } else {
-        // put other here
-        "304402204ebf033caf3a1a210623e98b49acb41db2220c531843106d5c50736b144b15aa02201a006be1ebc2ffef0927d4458e3bb5e41e5abc7e44fc5ceb920049b46f879711".to_string()
-    };
-
+//         // TODO: REMOVE!!
+//         if bitcoin_address::is_segwit_native(&input_to_sign.address) {
+//             let sighash_all_preimage_from_article = "0200000099197e88ff743aff3e453e3a7b745abd31937ccbd56f96a179266eba786833e682a7d5bb59fc957ff7f737ca0b8be713c705d6173783ad5edb067819bed70be89cb872539fbe1bc0b9c5562195095f3f35e6e13919259956c6263c9bd53b20b7010000001976a914594c2e3da92d1904f7e7c856220f8cae5efb556488ac5424000000000000fffffffff3ae23c3fd63a2e0479888f95c7a8ab221b20add6ac819e9d8953edd1a0cd9240000000001000000";
+//         assert_eq!(sighash_all_preimage, sighash_all_preimage_from_article);
+//         } else if bitcoin_address::is_nested_segwit(&input_to_sign.address) {
+//             let sighash_all_preimage_from_article = "0200000099197e88ff743aff3e453e3a7b745abd31937ccbd56f96a179266eba786833e682a7d5bb59fc957ff7f737ca0b8be713c705d6173783ad5edb067819bed70be88012f1ec8aa9a63cf8b200c25ddae2dece42a2495cc473c1758972cfcd84d904010000001976a9146a721dcca372f3c17b2c649b2ba61aa0fda98a9188ac1199f40000000000fffffffff3ae23c3fd63a2e0479888f95c7a8ab221b20add6ac819e9d8953edd1a0cd9240000000001000000";
+//             assert_eq!(sighash_all_preimage, sighash_all_preimage_from_article);
+//         } else {
+//             todo!()
+//         }
+//     let serialized_signature = if bitcoin_address::is_segwit_native(&input_to_sign.address) {
+//         "3045022100f8dac321b0429798df2952d086e763dd5b374d031c7f400d92370ae3c5f57afd0220531207b28b1b137573941c7b3cf5384a3658ef5fc238d26150d8f75b2bcc61e7".to_string()
+//     } else {
+//         // put other here
+//         "304402204ebf033caf3a1a210623e98b49acb41db2220c531843106d5c50736b144b15aa02201a006be1ebc2ffef0927d4458e3bb5e41e5abc7e44fc5ceb920049b46f879711".to_string()
+//     };
+// 
 
 
         // this should be calculated
@@ -1054,14 +1054,14 @@ fn get_signiture_for_legacy_input_at_index(
     
 
     // REMOVE THIS!
-    let serialized_signature_from_article = "304402200da2c4d8f2f44a8154fe127fe5bbe93be492aa589870fe77eb537681bc29c8ec02201eee7504e37db2ef27fa29afda46b6c331cd1a651bb6fa5fd85dcf51ac01567a";
-    let serialized_signature = serialized_signature_from_article;
-    let sighash_all_preimage_from_article = "0200000003ed204affc7519dfce341db0569687569d12b1520a91a9824531c038ad62aa9d1010000001976a914b780d54c6b03b053916333b50a213d566bbedd1388acffffffff9cb872539fbe1bc0b9c5562195095f3f35e6e13919259956c6263c9bd53b20b70100000000ffffffff8012f1ec8aa9a63cf8b200c25ddae2dece42a2495cc473c1758972cfcd84d9040100000000ffffffff01b580f50000000000160014cb61ee4568082cb59ac26bb96ec8fbe0109a4c000000000001000000";
-    println!("PREIMAGE OR LEGACY!! {}", sighash_all_preimage);
-    assert_eq!(sighash_all_preimage, sighash_all_preimage_from_article);
-
-    println!("serialized sig from article: {}", serialized_signature);
-    println!();
+//     let serialized_signature_from_article = "304402200da2c4d8f2f44a8154fe127fe5bbe93be492aa589870fe77eb537681bc29c8ec02201eee7504e37db2ef27fa29afda46b6c331cd1a651bb6fa5fd85dcf51ac01567a";
+//     let serialized_signature = serialized_signature_from_article;
+//     let sighash_all_preimage_from_article = "0200000003ed204affc7519dfce341db0569687569d12b1520a91a9824531c038ad62aa9d1010000001976a914b780d54c6b03b053916333b50a213d566bbedd1388acffffffff9cb872539fbe1bc0b9c5562195095f3f35e6e13919259956c6263c9bd53b20b70100000000ffffffff8012f1ec8aa9a63cf8b200c25ddae2dece42a2495cc473c1758972cfcd84d9040100000000ffffffff01b580f50000000000160014cb61ee4568082cb59ac26bb96ec8fbe0109a4c000000000001000000";
+//     println!("PREIMAGE OR LEGACY!! {}", sighash_all_preimage);
+//     assert_eq!(sighash_all_preimage, sighash_all_preimage_from_article);
+// 
+//     println!("serialized sig from article: {}", serialized_signature);
+//     println!();
     // this should be calculated
     let sighash_type_hex_of_1_byte = convert_decimal_to_hexadecimal(sighash_type, false, Some(1));
     let sighash_type_to_append_to_signature_hex = sighash_type_hex_of_1_byte;
@@ -1255,57 +1255,6 @@ fn legacy_transaction() {
     // assert_eq!(bitcoin_lib_signature, signature);
 }
 fn segwit_transaction() {
-    // mine
-    let pay_froms = vec![
-        // //nested_segwit
-        // wif: cSYMJxgaNbRqUGecNQX8b7NcqsHT1Lm4bH4SJaL3RS1t4pEJQJFy
-        PayFrom {
-            transaction: "6ab5851003684769ee4cd22fc5607e08b3a1ba5b4ea5b758ff3a514eaceae8f8"
-                .to_string(),
-            vout_index: 0,
-            // Don't need because it's a segwit input
-            script_pub_key_hex_of_vout: "a9141d543f0c946288f60685c236f0bfa124efddd79d87".to_string(),// without length
-            address: "2MuvJWP5uKxXLgUyTaTxjzSbDY6sR3H9jME".to_string(), // Placeholder for now
-            vout_amount_in_sats: 138447, // Placeholde as it's not needed for legacy
-        },
-        // native segwit
-        // wif: "cSYMJxgaNbRqUGecNQX8b7NcqsHT1Lm4bH4SJaL3RS1t4pEJQJFy".to_string(),
-        // PayFrom {
-        //     transaction: "6ab5851003684769ee4cd22fc5607e08b3a1ba5b4ea5b758ff3a514eaceae8f8"
-        //         .to_string(),
-        //     vout_index: 0,
-        //     script_pub_key_hex_of_vout: "".to_string(),
-        //     address: "2MuvJWP5uKxXLgUyTaTxjzSbDY6sR3H9jME".to_string(), // Placeholder for now
-        //     vout_amount_in_sats: 138447, // Placeholde as it's not needed for legacy
-        // },
-        // //legacy
-        // PayFrom {
-        //     transaction: "00819aafbdedfab7e76bb85c84094730a511a69025a90a3fa258edce5ee8aedb"
-        //         .to_string(),
-        //     vout_index: 1,
-        //     script_pub_key_hex_of_vout: "76a914954b56ba2c2c2eb142f0a52fbea129e63bffc1ad88ac"
-        //         .to_string(),
-        //     address: "mu8MEGRtj66ziwx7SMGjubXWbbwtB4aM2f".to_string(), // Placeholder for now
-        //     vout_amount_in_sats: 10000, // Placeholde as it's not needed for legacy
-        // },
-    ];
-    let pay_tos = vec![PayTo {
-        address: "2N2QQhDnMq3kkg5SZB8Z73y2pztsMWFjoG6".to_string(),
-        amount_in_sats: 138312,
-    }];
-    let mut wifs: HashMap<u64, String> = HashMap::new();
-    wifs.insert(
-        0,
-        "cSYMJxgaNbRqUGecNQX8b7NcqsHT1Lm4bH4SJaL3RS1t4pEJQJFy".to_string(),
-    );
-    // wifs.insert(
-    //     1,
-    //     "cUxM1d52z426Mr8EPQMhSJyKYRWNhJh17SQ6DQ6feGPsJnAEH6dT".to_string(),
-    // );
-    // wifs.insert(
-    //     2,
-    //     "cUrhNhmnpFBrKAfrrwSxnrk9XiDxtiigDG5phTKtbtY88rkgyMGv".to_string(),
-    // );
     // from article
     // Here's the mempoo transaction: https://mempool.space/testnet/tx/65eb5594eda20b3a2437c2e2c28ba7633f0492cbb33f62ee31469b913ce8a5ca
     let pay_froms = vec![
@@ -1360,6 +1309,57 @@ fn segwit_transaction() {
         2,
         "cUrhNhmnpFBrKAfrrwSxnrk9XiDxtiigDG5phTKtbtY88rkgyMGv".to_string(),
     );
+    // mine
+    let pay_froms = vec![
+        // //nested_segwit
+        // wif: cSYMJxgaNbRqUGecNQX8b7NcqsHT1Lm4bH4SJaL3RS1t4pEJQJFy
+        PayFrom {
+            transaction: "6ab5851003684769ee4cd22fc5607e08b3a1ba5b4ea5b758ff3a514eaceae8f8"
+                .to_string(),
+            vout_index: 0,
+            // Don't need because it's a segwit input
+            script_pub_key_hex_of_vout: "a9141d543f0c946288f60685c236f0bfa124efddd79d87".to_string(),// without length
+            address: "2MuvJWP5uKxXLgUyTaTxjzSbDY6sR3H9jME".to_string(), // Placeholder for now
+            vout_amount_in_sats: 138447, // Placeholde as it's not needed for legacy
+        },
+        // native segwit
+        // wif: "cSYMJxgaNbRqUGecNQX8b7NcqsHT1Lm4bH4SJaL3RS1t4pEJQJFy".to_string(),
+        // PayFrom {
+        //     transaction: "6ab5851003684769ee4cd22fc5607e08b3a1ba5b4ea5b758ff3a514eaceae8f8"
+        //         .to_string(),
+        //     vout_index: 0,
+        //     script_pub_key_hex_of_vout: "".to_string(),
+        //     address: "2MuvJWP5uKxXLgUyTaTxjzSbDY6sR3H9jME".to_string(), // Placeholder for now
+        //     vout_amount_in_sats: 138447, // Placeholde as it's not needed for legacy
+        // },
+        // //legacy
+        // PayFrom {
+        //     transaction: "00819aafbdedfab7e76bb85c84094730a511a69025a90a3fa258edce5ee8aedb"
+        //         .to_string(),
+        //     vout_index: 1,
+        //     script_pub_key_hex_of_vout: "76a914954b56ba2c2c2eb142f0a52fbea129e63bffc1ad88ac"
+        //         .to_string(),
+        //     address: "mu8MEGRtj66ziwx7SMGjubXWbbwtB4aM2f".to_string(), // Placeholder for now
+        //     vout_amount_in_sats: 10000, // Placeholde as it's not needed for legacy
+        // },
+    ];
+    let pay_tos = vec![PayTo {
+        address: "2N2QQhDnMq3kkg5SZB8Z73y2pztsMWFjoG6".to_string(),
+        amount_in_sats: 138312,
+    }];
+    let mut wifs: HashMap<u64, String> = HashMap::new();
+    wifs.insert(
+        0,
+        "cSYMJxgaNbRqUGecNQX8b7NcqsHT1Lm4bH4SJaL3RS1t4pEJQJFy".to_string(),
+    );
+    // wifs.insert(
+    //     1,
+    //     "cUxM1d52z426Mr8EPQMhSJyKYRWNhJh17SQ6DQ6feGPsJnAEH6dT".to_string(),
+    // );
+    // wifs.insert(
+    //     2,
+    //     "cUrhNhmnpFBrKAfrrwSxnrk9XiDxtiigDG5phTKtbtY88rkgyMGv".to_string(),
+    // );
 
 
     let transaction = SegwitTransaction::new(pay_froms.clone(), pay_tos.clone());
