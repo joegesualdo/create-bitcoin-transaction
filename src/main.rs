@@ -1143,6 +1143,7 @@ fn get_signiture_for_legacy_input_at_index(
         unsigned_raw_transaction_hex_with_script_pub_key_inserted,
         sighash_type_hex_in_little_endian
     );
+    println!("pre image!! {}", sighash_all_preimage);
 
 
     println!("wif!! {}", wif);
@@ -1420,13 +1421,23 @@ fn segwit_transaction() {
     let pay_froms = vec![
         // legacy
         PayFrom {
-            transaction: "a2b1dfbbb38d8aaf5d98b43547e87d10730e075ea93a0ac675e90ef4c52bf2c6"
+            transaction: "c0ab3d75e01c3817e5f91a51bfd99761f92718bcd555df9d2f29255fbdf3f01b"
                 .to_string(),
             vout_index: 0,
             // Don't need because it's a segwit input
-            script_pub_key_hex_of_vout: "00148092fc36414fa872e5f05743178f884ebb8804ae".to_string(),// without length
-            address: "tb1qszf0cdjpf7589e0s2ap30rugf6acsp9wt9vhl0".to_string(), // Placeholder for now
-            vout_amount_in_sats: 9890, // Placeholde as it's not needed for legacy
+            script_pub_key_hex_of_vout: "76a91460157ac886a0f9e039ae8a5b52e8498a44dbb27e88ac".to_string(),// without length
+            address: "mpGztuA4UCcgw1CrGihZSbKpdfXnkR3Wma".to_string(), // Placeholder for now
+            vout_amount_in_sats: 4000, // Placeholde as it's not needed for legacy
+        },
+        // bech32
+        PayFrom {
+            transaction: "7d0289e6928cf5f43197742c9d39dcc4a26aa380dd78e5eb0e13dcb7ebac9984"
+                .to_string(),
+            vout_index: 0,
+            // Don't need because it's a segwit input
+            script_pub_key_hex_of_vout: "001471f137d67e306d77a1b76237fcc63056304b2035".to_string(),// without length
+            address: "tb1qw8cn04n7xpkh0gdhvgmle33s2ccykgp4pmupmk".to_string(), // Placeholder for now
+            vout_amount_in_sats: 147820, // Placeholde as it's not needed for legacy
         },
         //legacy
         // PayFrom {
@@ -1449,19 +1460,19 @@ fn segwit_transaction() {
         // },
     ];
     let pay_tos = vec![PayTo {
-        address: "2N4tHr7vbXUphvYyxTnjc8Q2FC3iUGJ1vMA".to_string(),
+        address: "tb1q73av5es7v0m46fzdscgpkdk0kezhlcu8qkc0tg".to_string(),
         // amount_in_sats: 138178
-        amount_in_sats:9000,
+        amount_in_sats:147500,
     }];
     let mut wifs: HashMap<u64, String> = HashMap::new();
     wifs.insert(
         0,
-        "cUzmXqnEY5AGhAmnPkGC1YakC7VMAADgvKjJzUrgt4wA1LzF5M5q".to_string(),
+        "cTmbuD4eHeVETFYAzsiR9Lv5ceU3GRWNsMz6BQmAxrdym4aze4gS".to_string(),
     );
-    // wifs.insert(
-    //     1,
-    //     "cVhEcjV4cx3zUjXr6ttKUm67tZLtUf3iz4fxaCNjnjgodGCtegzH".to_string(),
-    // );
+    wifs.insert(
+        1,
+        "cQ53CdMtSqStbHdnLozmMLGeLs2aT8hEdHRDs2xkWkhDzVwEWKL6".to_string(),
+    );
     // wifs.insert(
     //     2,
     //     "cVhEcjV4cx3zUjXr6ttKUm67tZLtUf3iz4fxaCNjnjgodGCtegzH".to_string(),
