@@ -191,17 +191,17 @@ fn get_lock_time() -> String {
 }
 
 #[derive(Debug, Clone)]
-struct PayFrom {
-    transaction: String,
-    vout_index: u64,
-    script_pub_key_hex_of_vout: String,
-    address: String,          // native or wrapped,
-    vout_amount_in_sats: u64, // native or wrapped,
+pub struct PayFrom {
+    pub transaction: String,
+    pub vout_index: u64,
+    pub script_pub_key_hex_of_vout: String,
+    pub address: String,          // native or wrapped,
+    pub vout_amount_in_sats: u64, // native or wrapped,
 }
 #[derive(Debug, Clone)]
-struct PayTo {
-    address: String,
-    amount_in_sats: u64,
+pub struct PayTo {
+    pub address: String,
+    pub amount_in_sats: u64,
 }
 
 enum Transaction {
@@ -211,15 +211,15 @@ enum Transaction {
 
 #[derive(Debug, Clone)]
 // TODO: This should be named LegacyTransaction
-struct SegwitTransaction {
-    version: u8,
-    inputs: Vec<PayFrom>,
-    outputs: Vec<PayTo>,
-    locktime: String,
+pub struct SegwitTransaction {
+    pub version: u8,
+    pub inputs: Vec<PayFrom>,
+    pub outputs: Vec<PayTo>,
+    pub locktime: String,
 }
 
 impl SegwitTransaction {
-    fn new(inputs: Vec<PayFrom>, outputs: Vec<PayTo>) -> Self {
+    pub fn new(inputs: Vec<PayFrom>, outputs: Vec<PayTo>) -> Self {
         SegwitTransaction {
             // TODO: Shouldn't hardcode this
             version: 2,
@@ -230,7 +230,7 @@ impl SegwitTransaction {
         }
     }
 
-    fn get_parts(&self) -> LegacyRawTransaction {
+    pub fn get_parts(&self) -> LegacyRawTransaction {
         LegacyRawTransaction {
             version_hex: get_version(self.version),
             inputs: self
@@ -357,11 +357,11 @@ impl LegacyTransaction {
     }
 }
 #[derive(Debug, Clone)]
-struct RawInput {
-    previous_transaction_hash_hex: String,
-    previous_transaction_output_index_hex: String,
-    script_sig_hex: String,
-    sequence_hex: String,
+pub struct RawInput {
+    pub previous_transaction_hash_hex: String,
+    pub previous_transaction_output_index_hex: String,
+    pub script_sig_hex: String,
+    pub sequence_hex: String,
 }
 impl RawInput {
     fn get_script_sig_length_hex(&self) -> String {
@@ -399,9 +399,9 @@ impl RawInput {
     }
 }
 #[derive(Debug, Clone)]
-struct RawOutput {
-    amount_hex: String,
-    script_pub_key_hex: String,
+pub struct RawOutput {
+    pub amount_hex: String,
+    pub script_pub_key_hex: String,
 }
 impl RawOutput {
     fn get_script_pub_key_length_hex(&self) -> String {
@@ -417,14 +417,14 @@ impl RawOutput {
     }
 }
 #[derive(Debug, Clone)]
-struct LegacyRawTransaction {
-    version_hex: String,
-    inputs: Vec<RawInput>,
-    outputs: Vec<RawOutput>,
-    locktime_hex: String,
+pub struct LegacyRawTransaction {
+    pub version_hex: String,
+    pub inputs: Vec<RawInput>,
+    pub outputs: Vec<RawOutput>,
+    pub locktime_hex: String,
 }
 impl LegacyRawTransaction {
-    fn get_raw_string(&self, should_include_locktime: bool, should_include_version: bool, should_input_address_be_in_little_endian: bool) -> String {
+    pub fn get_raw_string(&self, should_include_locktime: bool, should_include_version: bool, should_input_address_be_in_little_endian: bool) -> String {
         let string_between_version_and_locktime = format!(
             "{}{}{}{}",
             self.get_inputs_count_hex(),
@@ -512,7 +512,7 @@ fn this(public_key_hash: &String, with_length: bool) -> String {
                         }
 }
 
-fn sign_segwit_transaction(transaction_to_sign: &SegwitTransaction, wifs: HashMap<u64, String>) {
+pub fn sign_segwit_transaction(transaction_to_sign: &SegwitTransaction, wifs: HashMap<u64, String>) {
     // Source: https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526a
     let unsigned_raw_transaction = transaction_to_sign.get_parts();
 
@@ -1361,152 +1361,6 @@ fn legacy_transaction() {
     println!("Signature: \n{}", signature);
     println!();
     // assert_eq!(bitcoin_lib_signature, signature);
-}
-fn segwit_transaction() {
-    // from article
-    // Here's the mempoo transaction: https://mempool.space/testnet/tx/65eb5594eda20b3a2437c2e2c28ba7633f0492cbb33f62ee31469b913ce8a5ca
-    let pay_froms = vec![
-        //legacy
-        // mempool: https://mempool.space/testnet/tx/d1a92ad68a031c5324981aa920152bd16975686905db41e3fc9d51c7ff4a20edj
-        PayFrom {
-            transaction: "d1a92ad68a031c5324981aa920152bd16975686905db41e3fc9d51c7ff4a20ed"
-                .to_string(),
-            vout_index: 1,
-            script_pub_key_hex_of_vout: "76a914b780d54c6b03b053916333b50a213d566bbedd1388ac"
-                .to_string(),
-            address: "mxFEHeSxxKjy9YcmFzXNpuE3FFJyby56jA".to_string(), // Placeholder for now
-            vout_amount_in_sats: 52000, // Placeholde as it's not needed for legacy
-        },
-        // native segwit
-        // mempool vout: https://mempool.space/testnet/tx/b7203bd59b3c26c65699251939e1e6353f5f09952156c5b9c01bbe9f5372b89c
-        PayFrom {
-            transaction: "b7203bd59b3c26c65699251939e1e6353f5f09952156c5b9c01bbe9f5372b89c"
-                .to_string(),
-            vout_index: 1,
-            // Don't need because it's a segwit input
-            script_pub_key_hex_of_vout: "0014594c2e3da92d1904f7e7c856220f8cae5efb5564".to_string(),
-            address: "tb1qt9xzu0df95vsfal8eptzyruv4e00k4ty6d8zhh".to_string(), // Placeholder for now
-            vout_amount_in_sats: 9300, // Placeholde as it's not needed for legacy
-        },
-        // //nested_segwit
-        // mempool vout: https://mempool.space/testnet/tx/04d984cdcf728975c173c45c49a242cedee2da5dc200b2f83ca6a98aecf11280
-        PayFrom {
-            transaction: "04d984cdcf728975c173c45c49a242cedee2da5dc200b2f83ca6a98aecf11280"
-                .to_string(),
-            vout_index: 1,
-            // Don't need because it's a segwit input
-            script_pub_key_hex_of_vout: "a914809b71783f1b55eeadeb1678baef0c994adc425987".to_string(),
-            address: "2N4yEhDwic9Tm4BRN9EP1hnSu9f6cWJrU31".to_string(), // Placeholder for now
-            vout_amount_in_sats: 16029969, // Placeholde as it's not needed for legacy
-        },
-    ];
-    let pay_tos = vec![PayTo {
-        address: "tb1qeds7u3tgpqkttxkzdwukaj8muqgf5nqq6w05ak".to_string(),
-        amount_in_sats: 16089269,
-    }];
-    let mut wifs: HashMap<u64, String> = HashMap::new();
-    wifs.insert(
-        0,
-        "cUxM1d52z426Mr8EPQMhSJyKYRWNhJh17SQ6DQ6feGPsJnAEH6dT".to_string(),
-    );
-    wifs.insert(
-        1,
-        "cNtTKNbNhz94XesU5cNhTtZ9E2QgGTDNgXjCHkYYKZaLZgmP3wKL".to_string(),
-    );
-    wifs.insert(
-        2,
-        "cUrhNhmnpFBrKAfrrwSxnrk9XiDxtiigDG5phTKtbtY88rkgyMGv".to_string(),
-    );
-    // mine
-    let pay_froms = vec![
-        // legacy
-        PayFrom {
-            transaction: "c0ab3d75e01c3817e5f91a51bfd99761f92718bcd555df9d2f29255fbdf3f01b"
-                .to_string(),
-            vout_index: 0,
-            // Don't need because it's a segwit input
-            script_pub_key_hex_of_vout: "76a91460157ac886a0f9e039ae8a5b52e8498a44dbb27e88ac".to_string(),// without length
-            address: "mpGztuA4UCcgw1CrGihZSbKpdfXnkR3Wma".to_string(), // Placeholder for now
-            vout_amount_in_sats: 4000, // Placeholde as it's not needed for legacy
-        },
-        // bech32
-        PayFrom {
-            transaction: "7d0289e6928cf5f43197742c9d39dcc4a26aa380dd78e5eb0e13dcb7ebac9984"
-                .to_string(),
-            vout_index: 0,
-            // Don't need because it's a segwit input
-            script_pub_key_hex_of_vout: "001471f137d67e306d77a1b76237fcc63056304b2035".to_string(),// without length
-            address: "tb1qw8cn04n7xpkh0gdhvgmle33s2ccykgp4pmupmk".to_string(), // Placeholder for now
-            vout_amount_in_sats: 147820, // Placeholde as it's not needed for legacy
-        },
-        //legacy
-        // PayFrom {
-        //     transaction: "769e23f594d6794e72ce316c884bc636795848c1cc83d5225fae7f25a3dcb4ae"
-        //         .to_string(),
-        //     vout_index: 0,
-        //     script_pub_key_hex_of_vout: "a9146475cffe4c9091303e0e1281776a343dac8faedc87"
-        //         .to_string(),
-        //     address: "2N2QQhDnMq3kkg5SZB8Z73y2pztsMWFjoG6".to_string(), // Placeholder for now
-        //     vout_amount_in_sats: 138312, // Placeholde as it's not needed for legacy
-        // },
-        // native
-        // PayFrom {
-        //     transaction: "769e23f594d6794e72ce316c884bc636795848c1cc83d5225fae7f25a3dcb4ae"
-        //         .to_string(),
-        //     vout_index: 0,
-        //     script_pub_key_hex_of_vout: "a9146475cffe4c9091303e0e1281776a343dac8faedc87".to_string(),
-        //     address: "2N2QQhDnMq3kkg5SZB8Z73y2pztsMWFjoG6".to_string(), // Placeholder for now
-        //     vout_amount_in_sats: 138312, // Placeholde as it's not needed for legacy
-        // },
-    ];
-    let pay_tos = vec![PayTo {
-        address: "tb1q73av5es7v0m46fzdscgpkdk0kezhlcu8qkc0tg".to_string(),
-        // amount_in_sats: 138178
-        amount_in_sats:147500,
-    }];
-    let mut wifs: HashMap<u64, String> = HashMap::new();
-    wifs.insert(
-        0,
-        "cTmbuD4eHeVETFYAzsiR9Lv5ceU3GRWNsMz6BQmAxrdym4aze4gS".to_string(),
-    );
-    wifs.insert(
-        1,
-        "cQ53CdMtSqStbHdnLozmMLGeLs2aT8hEdHRDs2xkWkhDzVwEWKL6".to_string(),
-    );
-    // wifs.insert(
-    //     2,
-    //     "cVhEcjV4cx3zUjXr6ttKUm67tZLtUf3iz4fxaCNjnjgodGCtegzH".to_string(),
-    // );
-
-
-    let transaction = SegwitTransaction::new(pay_froms.clone(), pay_tos.clone());
-    let parts = transaction.get_parts();
-    let version_hex = &parts.version_hex;
-    let segwit_marker = "00"; // TODO: Don't hardcode
-    let flag = "01"; // TODO: Don't hardcode
-    // let transaction_to_sign = format!("{}{}{}{}",version_hex, segwit_marker, flag, &parts.get_raw_string(true, false));
-    let transaction_to_sign = &parts.get_raw_string(true, true, true);
-    // println!("UNSIGNED transaction: \n{}", transaction_to_sign);
-
-
-    let signature = sign_segwit_transaction(&transaction, wifs);
-    //println!();
-    //// println!("Signature (bitcoin lib): \n{}", bitcoin_lib_signature);
-    //println!();
-    //println!("Signature: \n{}", signature);
-    //println!();
-    // assert_eq!(bitcoin_lib_signature, signature);
-}
-
-fn main() {
-    // legacy_transaction()
-    segwit_transaction();
-    let legacy_wif = get_wif_from_private_key(&"DBFF11E0F2F1AA5089465A591C5E523D1CA92668DED893155CDFABC94CC14E30".to_string(), bitcoin_hd_keys::Network::Testnet, true);
-    let nested_segwit_wif = get_wif_from_private_key(&"D9172189D7700FDFB4B6A5C4A83990EAEAFE455441B7D43FF85678EB93AC2713".to_string(), bitcoin_hd_keys::Network::Testnet, true);
-    let native_segwit__wif = get_wif_from_private_key(&"26F85CE8B2C635AD92F6148E4443FE415F512F3F29F44AB0E2CBDA819295BBD5".to_string(), bitcoin_hd_keys::Network::Testnet, true);
-    println!("legacy_wif: {}", legacy_wif);
-    println!("nested_wif: {}", nested_segwit_wif);
-    println!("native_wif: {}", native_segwit__wif);
 }
 
 // fn sign_with_pubkey_hash(pub_key_hash: &String, wif: &String) -> () {

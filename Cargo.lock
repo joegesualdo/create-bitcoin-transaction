@@ -32,6 +32,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitcoin-address"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "715dcd97e21f2e91b5620adba67ede6a6c597ae51b21b11d3cefef490788fc16"
+
+[[package]]
 name = "bitcoin-bech32"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -42,11 +48,12 @@ dependencies = [
 
 [[package]]
 name = "bitcoin-hd-keys"
-version = "0.1.4"
+version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f56696f7fb9093bb9c0d8507cdd1347f5518b0e250c1517b269a18f4dc851e6"
+checksum = "32eccab0c1d29521446466de68665786cf6d82aeacb7c1918fd84352dbfce9f3"
 dependencies = [
  "bitcoin",
+ "bitcoin-address",
  "bitcoin-bech32",
  "bs58",
  "hmac-sha512",
@@ -126,6 +133,7 @@ name = "create-bitcoin-transaction"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
+ "bitcoin-address",
  "bitcoin-hd-keys",
  "hex-utilities",
  "sha2 0.10.5",

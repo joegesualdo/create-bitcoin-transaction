@@ -9,8 +9,10 @@ use bitcoin::{
     OutPoint, PrivateKey, Script, Transaction, TxIn, TxOut, Witness,
 };
 use bitcoin_hd_keys::{
-    convert_wif_to_private_key, double_sha256, get_public_key_hash_from_address,
+    convert_wif_to_private_key, double_sha256_hex, get_public_key_hash_from_address,
+    get_script_hash_from_p2sh_address,
 };
+const OP_0: &str = "00";
 use sha2::{Digest, Sha256};
 // Sources:
 // - http://www.righto.com/2014/02/bitcoins-hard-way-using-raw-bitcoin.html
@@ -131,18 +133,44 @@ fn get_output_script_length(output_script_pub_key_hex: &String) -> String {
     // script_length_bytes_in_hex
     get_byte_length_of_hex(output_script_pub_key_hex)
 }
+// fn get_output_script_sig_for_p2pkh(public_key_hash: String) -> String {
+//     let public_key_hash_to_send_to = public_key_hash.to_string();
+//     create_p2pkh_script_pub_key_hex_from_pub_key_hash(&public_key_hash_to_send_to)
+// }
+// fn get_output_script_sig_for_p2sh(public_key_hash: &String) -> String {
+//     let length = get_byte_length_of_hex(&public_key_hash);
+//     // TODO: HARDCODING FOR NOW
+//
+//     let sh = format!("{}{}", length, public_key_hash.to_string());
+//
+//     create_p2sh_script_pub_key_hex_from_sh(&sh)
+// }
 fn get_output_script_sig_for_p2pkh(public_key_hash: String) -> String {
     let public_key_hash_to_send_to = public_key_hash.to_string();
     create_p2pkh_script_pub_key_hex_from_pub_key_hash(&public_key_hash_to_send_to)
 }
 fn get_output_script_sig_for_p2sh(public_key_hash: &String) -> String {
+    println!("THIS IS WHERE WE ARE!");
     let length = get_byte_length_of_hex(&public_key_hash);
     // TODO: HARDCODING FOR NOW
-
     let sh = format!("{}{}", length, public_key_hash.to_string());
 
-    create_p2sh_script_pub_key_hex_from_sh(&sh)
+    let a = create_p2sh_script_pub_key_hex_from_sh(&sh);
+    println!("a: {}", a);
+    a
 }
+fn get_output_script_sig_for_p2wpkh(public_key_hash: &String) -> String {
+    create_p2wpkh_script_pub_key_hex_from_pub_key_hash(&public_key_hash)
+}
+fn create_p2wpkh_script_pub_key_hex_from_pub_key_hash(pub_key_hash: &String) -> String {
+    // TODO: Why are these the prefix and postfix for a p2pkh script?
+    let pub_key_hash_length = get_byte_length_of_hex(pub_key_hash);
+    let pub_key_hash_with_length = format!("{}{}", pub_key_hash_length, pub_key_hash);
+    let script_start = format!("{}", OP_0);
+    let prefix = "00";
+    format!("{}{}", script_start, pub_key_hash_with_length)
+}
+
 fn get_lock_time() -> String {
     "00000000".to_string()
 }
@@ -208,14 +236,27 @@ impl P2PKHTransaction {
                     let address = &output.address;
                     // TODO: DO BETTER ADDRESS TYPE CHECKING HERE! Maybe use bitcoin-address
                     // package
-                    let is_p2sh_address = address.starts_with("2");
-                    let public_key_hash = get_public_key_hash_from_address(address);
+                    let is_legacy_address = bitcoin_address::is_legacy(address);
+                    let is_p2sh_address = bitcoin_address::is_p2sh(address);
+                    let is_p2wpkh_address = bitcoin_address::is_segwit_native(address);
                     P2PKHRawOutput {
                         amount_hex: get_output_amount(output.amount_in_sats),
                         script_pub_key_hex: if is_p2sh_address {
-                            get_output_script_sig_for_p2sh(&public_key_hash)
-                        } else {
+                            if bitcoin_address::is_nested_segwit(address) {
+                                println!("MAYBE HERE.....{}", address);
+                                let sh = get_script_hash_from_p2sh_address(address);
+                                get_output_script_sig_for_p2sh(&sh)
+                            } else {
+                                todo!("Support other types of p2sh")
+                            }
+                        } else if is_p2wpkh_address {
+                            let public_key_hash = get_public_key_hash_from_address(address);
+                            get_output_script_sig_for_p2wpkh(&public_key_hash)
+                        } else if is_legacy_address {
+                            let public_key_hash = get_public_key_hash_from_address(address);
                             get_output_script_sig_for_p2pkh(public_key_hash)
+                        } else {
+                            panic!("address type not know: {}", address);
                         },
                     }
                 })
@@ -408,7 +449,7 @@ fn get_signiture_script_for_input_at_index(
         sighash_type_hex_in_little_endian
     );
 
-    let transaction_double_sha_256 = double_sha256(&input_0_sighash_all_preimage);
+    let transaction_double_sha_256 = double_sha256_hex(&input_0_sighash_all_preimage);
 
     let secp = Secp256k1::new();
     let msg = Message::from_slice(&decode_hex(&transaction_double_sha_256).unwrap()).unwrap();
