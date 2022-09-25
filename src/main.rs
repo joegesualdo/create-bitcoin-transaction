@@ -6,8 +6,8 @@ use segwit_transaction::{
 use std::collections::HashMap;
 
 use crate::legacy_transaction::{
-    sign_p2pkh_transaction_with_one_input, P2PKHTransaction, PayFrom as LegacyPayFrom,
-    PayTo as LegacyPayTo,
+    get_unsigned_transaction_hex, sign_p2pkh_transaction_with_one_input, P2PKHTransaction,
+    PayFrom as LegacyPayFrom, PayTo as LegacyPayTo,
 };
 
 fn legacy_transaction() {
@@ -23,19 +23,18 @@ fn legacy_transaction() {
     }];
 
     let transaction = P2PKHTransaction::new(pay_froms.clone(), pay_tos.clone());
-    let parts = transaction.get_parts();
-    let transaction_to_sign = parts.get_raw_string();
+    let unsigned_transaction_hex = get_unsigned_transaction_hex(&transaction);
+    println!("UNSIGNED transaction: \n{}", unsigned_transaction_hex);
+    println!();
+
     let mut wifs: HashMap<u64, String> = HashMap::new();
     wifs.insert(
         0,
         "cSYMJxgaNbRqUGecNQX8b7NcqsHT1Lm4bH4SJaL3RS1t4pEJQJFy".to_string(),
     );
+    let signed_transaction_hex = sign_p2pkh_transaction_with_one_input(&transaction, wifs);
 
-    let signature = sign_p2pkh_transaction_with_one_input(&transaction, wifs);
-
-    println!("UNSIGNED transaction: \n{}", transaction_to_sign);
-    println!();
-    println!("Signature: \n{}", signature);
+    println!("Signature: \n{}", signed_transaction_hex);
     println!();
 }
 

@@ -188,6 +188,11 @@ pub struct PayTo {
     pub amount_in_sats: u64,
 }
 
+pub fn get_unsigned_transaction_hex(transaction: &P2PKHTransaction) -> String {
+    let parts = transaction.get_parts();
+    parts.get_raw_string()
+}
+
 #[derive(Debug, Clone)]
 pub struct P2PKHTransaction {
     pub version: u8,
