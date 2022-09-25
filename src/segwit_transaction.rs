@@ -5,12 +5,13 @@ use bitcoin::{
     blockdata::script::Builder,
     hashes::{self, sha256, Hash},
     psbt::serialize::Serialize,
-    secp256k1::{Message, Secp256k1, SecretKey, PublicKey},
+    secp256k1::{Message, PublicKey, Secp256k1, SecretKey},
     OutPoint, PrivateKey, Script, Transaction as BitcoinLibTransaction, TxIn, TxOut, Witness,
 };
 use bitcoin_hd_keys::{
-    convert_wif_to_private_key, double_sha256_hex, get_public_key_hash_from_address,
-    get_public_key_hash_from_public_key, get_wif_from_private_key, get_script_hash_from_p2sh_address, get_public_key_from_wif, sha256_hex, hash160_for_hex,
+    convert_wif_to_private_key, double_sha256_hex, get_public_key_from_wif,
+    get_public_key_hash_from_address, get_public_key_hash_from_public_key,
+    get_script_hash_from_p2sh_address, get_wif_from_private_key, hash160_for_hex, sha256_hex,
 };
 use sha2::{Digest, Sha256};
 // Sources:
@@ -270,10 +271,10 @@ impl SegwitTransaction {
                                 todo!("Support other types of p2sh")
                             }
                         } else if is_p2wpkh_address {
-                             let public_key_hash = get_public_key_hash_from_address(address);
+                            let public_key_hash = get_public_key_hash_from_address(address);
                             get_output_script_sig_for_p2wpkh(&public_key_hash)
                         } else if is_legacy_address {
-                             let public_key_hash = get_public_key_hash_from_address(address);
+                            let public_key_hash = get_public_key_hash_from_address(address);
                             get_output_script_sig_for_p2pkh(public_key_hash)
                         } else {
                             panic!("address type not know: {}", address);
@@ -424,7 +425,12 @@ pub struct LegacyRawTransaction {
     pub locktime_hex: String,
 }
 impl LegacyRawTransaction {
-    pub fn get_raw_string(&self, should_include_locktime: bool, should_include_version: bool, should_input_address_be_in_little_endian: bool) -> String {
+    pub fn get_raw_string(
+        &self,
+        should_include_locktime: bool,
+        should_include_version: bool,
+        should_input_address_be_in_little_endian: bool,
+    ) -> String {
         let string_between_version_and_locktime = format!(
             "{}{}{}{}",
             self.get_inputs_count_hex(),
@@ -443,7 +449,10 @@ impl LegacyRawTransaction {
                 )),
         );
         let string_after_version = if should_include_locktime {
-            format!("{}{}", string_between_version_and_locktime, self.locktime_hex)
+            format!(
+                "{}{}",
+                string_between_version_and_locktime, self.locktime_hex
+            )
         } else {
             string_between_version_and_locktime
         };
@@ -489,30 +498,32 @@ impl LegacyRawTransaction {
 }
 
 fn this(public_key_hash: &String, with_length: bool) -> String {
-            // get_output_script_sig_for_p2sh(&public_key_hash)
-            let pub_key_length = get_byte_length_of_hex(&public_key_hash);
-            // TODO: HARDCODING FOR NOW
-            // let sh = format!("{}{}", length, public_key_hash.to_string());
+    // get_output_script_sig_for_p2sh(&public_key_hash)
+    let pub_key_length = get_byte_length_of_hex(&public_key_hash);
+    // TODO: HARDCODING FOR NOW
+    // let sh = format!("{}{}", length, public_key_hash.to_string());
 
-            // TODO: Why are these the prefix and postfix for a p2pkh script?
-            // let prefix = "a9";
-            // let postfix = "87";
-            // let a = format!("{}{}{}", prefix, sh, postfix);
-            let public_key_hash_with_length = format!("{}{}", pub_key_length, public_key_hash);
-            let redeem_script= format!("{}{}", "00", public_key_hash_with_length);
-                    
+    // TODO: Why are these the prefix and postfix for a p2pkh script?
+    // let prefix = "a9";
+    // let postfix = "87";
+    // let a = format!("{}{}{}", prefix, sh, postfix);
+    let public_key_hash_with_length = format!("{}{}", pub_key_length, public_key_hash);
+    let redeem_script = format!("{}{}", "00", public_key_hash_with_length);
 
-                    //let redeem_script = get_output_script_sig_for_p2wpkh(&public_key_hash);
-                     let redeem_script_length = get_byte_length_of_hex(&redeem_script);
+    //let redeem_script = get_output_script_sig_for_p2wpkh(&public_key_hash);
+    let redeem_script_length = get_byte_length_of_hex(&redeem_script);
 
-                        if with_length {
-                            format!("{}{}", redeem_script_length, redeem_script)
-                        } else {
-                            redeem_script
-                        }
+    if with_length {
+        format!("{}{}", redeem_script_length, redeem_script)
+    } else {
+        redeem_script
+    }
 }
 
-pub fn sign_segwit_transaction(transaction_to_sign: &SegwitTransaction, wifs: HashMap<u64, String>) {
+pub fn sign_segwit_transaction(
+    transaction_to_sign: &SegwitTransaction,
+    wifs: HashMap<u64, String>,
+) {
     // Source: https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526a
     let unsigned_raw_transaction = transaction_to_sign.get_parts();
 
@@ -547,7 +558,7 @@ pub fn sign_segwit_transaction(transaction_to_sign: &SegwitTransaction, wifs: Ha
     fn get_final_transaction_serialization(
         transaction_to_sign: &SegwitTransaction,
         signature_scripts: SignatureScripts,
-        wifs: Wifs
+        wifs: Wifs,
     ) {
         println!();
         println!("GETTING FINAL SERIALIZATION ---------------------------------------");
@@ -557,280 +568,329 @@ pub fn sign_segwit_transaction(transaction_to_sign: &SegwitTransaction, wifs: Ha
         let segwit_marker = "00"; // TODO: Don't hardcode
         let flag = "01"; // TODO: Don't hardcode
         fn get_unsigned_transaction(
-        transaction_to_sign: &SegwitTransaction,
-        signature_scripts: &SignatureScripts,
-        wifs: &Wifs
+            transaction_to_sign: &SegwitTransaction,
+            signature_scripts: &SignatureScripts,
+            wifs: &Wifs,
         ) -> String {
-        let segwit_marker = "00"; // TODO: Don't hardcode
-        let flag = "01"; // TODO: Don't hardcode
-        let inputs_section = vec![0; signature_scripts.len()]
-            .iter()
-            .enumerate()
-            .map(|(index, _)| {
-                let input = &transaction_to_sign.inputs[index];
-                let raw_input = &transaction_to_sign.get_parts().inputs[index];
-                let public_key = get_public_key_from_wif(&wifs[&(index as u64)]);
-                let public_key_hash = get_public_key_hash_from_public_key(&public_key);
-                let public_key_hash_length = get_byte_length_of_hex(&public_key_hash);
-                let public_key_length = get_byte_length_of_hex(&public_key);
-                let public_key_with_length = format!("{}{}", 
-                    public_key_length,
-                    public_key,
-                );
-                let public_key_hash_with_length = format!("{}{}", 
-                    public_key_hash_length,
-                    public_key_hash,
-                );
-                if bitcoin_address::is_legacy(&input.address) {
-                    let signature = &signature_scripts[&(index as u64)];
-                    let signature_length = get_byte_length_of_hex(signature);
-                    let script_sig_with_length = format!("{}{}", 
-                                                 signature_length, 
-                                                 signature
-                    );
-                    let signature_and_public_key = format!("{}{}", script_sig_with_length, public_key_with_length);
-                    let signature_and_public_key_length= get_byte_length_of_hex(&signature_and_public_key);
-                    let script_sig_with_length = format!("{}{}", signature_and_public_key_length, signature_and_public_key);
-                    let a = format!(
-                        "{}{}{}{}",
-                        // TODO: extract this
-                        // segwit uses little endian
-                        convert_big_endian_hex_to_little_endian(&raw_input.previous_transaction_hash_hex),
-                        raw_input.previous_transaction_output_index_hex,
-                        "00",
-                        raw_input.sequence_hex
-                    );
-                            println!("T: {}", a);
-                    a
-                } else if bitcoin_address::is_segwit_native(&input.address) {
-                    let a = format!(
-                        "{}{}{}{}",
-                        // TODO: extract this
-                        // segwit uses little endian
-                        convert_big_endian_hex_to_little_endian(&raw_input.previous_transaction_hash_hex),
-                        raw_input.previous_transaction_output_index_hex,
-                        "00",
-                        raw_input.sequence_hex,
-                    );
-                            println!("T: {}", a);
-                    a
-                } else if bitcoin_address::is_p2sh(&input.address) {
-                    if bitcoin_address::is_nested_segwit(&input.address) {
-                        let redeem_script = format!("{}{}", OP_0, public_key_hash_with_length);
-                        let redeem_script_length = get_byte_length_of_hex(&redeem_script);
-                        let script = format!("{}{}", redeem_script_length, redeem_script);
-                        let script_length = get_byte_length_of_hex(&script);
-                        let script_with_length = format!("{}{}", script_length, script);
+            let segwit_marker = "00"; // TODO: Don't hardcode
+            let flag = "01"; // TODO: Don't hardcode
+            let inputs_section = vec![0; signature_scripts.len()]
+                .iter()
+                .enumerate()
+                .map(|(index, _)| {
+                    let input = &transaction_to_sign.inputs[index];
+                    let raw_input = &transaction_to_sign.get_parts().inputs[index];
+                    let public_key = get_public_key_from_wif(&wifs[&(index as u64)]);
+                    let public_key_hash = get_public_key_hash_from_public_key(&public_key);
+                    let public_key_hash_length = get_byte_length_of_hex(&public_key_hash);
+                    let public_key_length = get_byte_length_of_hex(&public_key);
+                    let public_key_with_length = format!("{}{}", public_key_length, public_key,);
+                    let public_key_hash_with_length =
+                        format!("{}{}", public_key_hash_length, public_key_hash,);
+                    if bitcoin_address::is_legacy(&input.address) {
+                        let signature = &signature_scripts[&(index as u64)];
+                        let signature_length = get_byte_length_of_hex(signature);
+                        let script_sig_with_length = format!("{}{}", signature_length, signature);
+                        let signature_and_public_key =
+                            format!("{}{}", script_sig_with_length, public_key_with_length);
+                        let signature_and_public_key_length =
+                            get_byte_length_of_hex(&signature_and_public_key);
+                        let script_sig_with_length = format!(
+                            "{}{}",
+                            signature_and_public_key_length, signature_and_public_key
+                        );
                         let a = format!(
                             "{}{}{}{}",
                             // TODO: extract this
                             // segwit uses little endian
-                            convert_big_endian_hex_to_little_endian(&raw_input.previous_transaction_hash_hex),
+                            convert_big_endian_hex_to_little_endian(
+                                &raw_input.previous_transaction_hash_hex
+                            ),
+                            raw_input.previous_transaction_output_index_hex,
+                            "00",
+                            raw_input.sequence_hex
+                        );
+                        println!("T: {}", a);
+                        a
+                    } else if bitcoin_address::is_segwit_native(&input.address) {
+                        let a = format!(
+                            "{}{}{}{}",
+                            // TODO: extract this
+                            // segwit uses little endian
+                            convert_big_endian_hex_to_little_endian(
+                                &raw_input.previous_transaction_hash_hex
+                            ),
                             raw_input.previous_transaction_output_index_hex,
                             "00",
                             raw_input.sequence_hex,
                         );
-                            println!("T: {}", a);
+                        println!("T: {}", a);
                         a
+                    } else if bitcoin_address::is_p2sh(&input.address) {
+                        if bitcoin_address::is_nested_segwit(&input.address) {
+                            let redeem_script = format!("{}{}", OP_0, public_key_hash_with_length);
+                            let redeem_script_length = get_byte_length_of_hex(&redeem_script);
+                            let script = format!("{}{}", redeem_script_length, redeem_script);
+                            let script_length = get_byte_length_of_hex(&script);
+                            let script_with_length = format!("{}{}", script_length, script);
+                            let a = format!(
+                                "{}{}{}{}",
+                                // TODO: extract this
+                                // segwit uses little endian
+                                convert_big_endian_hex_to_little_endian(
+                                    &raw_input.previous_transaction_hash_hex
+                                ),
+                                raw_input.previous_transaction_output_index_hex,
+                                "00",
+                                raw_input.sequence_hex,
+                            );
+                            println!("T: {}", a);
+                            a
+                        } else {
+                            todo!();
+                        }
                     } else {
                         todo!();
                     }
-                } else {
-                        todo!();
-                }
-        }).collect::<Vec<String>>().join("");
-        let inputs_count_hex = convert_decimal_to_hexadecimal(transaction_to_sign.inputs.len() as u64, false, Some(1));
-        println!("INPUTS : {}", inputs_section);
-        let concated_outputs = transaction_to_sign
-            .get_parts()
-            .outputs
-            .iter()
-            .map(|raw_output| {
-                let script_pub_key_hex = &raw_output.script_pub_key_hex;
-                format!(
-                    "{}{}{}",
-                    raw_output.amount_hex,
-                    get_byte_length_of_hex(&script_pub_key_hex),
-                    &script_pub_key_hex
-                )
-            })
-            .collect::<Vec<String>>()
-            .join("");
-        let outputs_count_hex = convert_decimal_to_hexadecimal(transaction_to_sign.outputs.len() as u64, false, Some(1));
-        let n_version_hex = transaction_to_sign.get_parts().version_hex;
-        let signed_transaction_before_witness_section = format!("{}{}{}{}{}{}{}", n_version_hex, segwit_marker, flag, inputs_count_hex, inputs_section, outputs_count_hex, concated_outputs);
-        println!(
-            "OUTPUTS: {:#?}",
-          concated_outputs 
-        );
-        let unsigned_transaction = format!("{}{}{}{}{}{}", n_version_hex, inputs_count_hex, inputs_section, outputs_count_hex, concated_outputs, transaction_to_sign.locktime);
-        println!("------------------------------------------");
-        println!(
-            "UNSIGNED: {}",
-         unsigned_transaction
-        );
-        println!("------------------------------------------");
-        unsigned_transaction
-
+                })
+                .collect::<Vec<String>>()
+                .join("");
+            let inputs_count_hex = convert_decimal_to_hexadecimal(
+                transaction_to_sign.inputs.len() as u64,
+                false,
+                Some(1),
+            );
+            println!("INPUTS : {}", inputs_section);
+            let concated_outputs = transaction_to_sign
+                .get_parts()
+                .outputs
+                .iter()
+                .map(|raw_output| {
+                    let script_pub_key_hex = &raw_output.script_pub_key_hex;
+                    format!(
+                        "{}{}{}",
+                        raw_output.amount_hex,
+                        get_byte_length_of_hex(&script_pub_key_hex),
+                        &script_pub_key_hex
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join("");
+            let outputs_count_hex = convert_decimal_to_hexadecimal(
+                transaction_to_sign.outputs.len() as u64,
+                false,
+                Some(1),
+            );
+            let n_version_hex = transaction_to_sign.get_parts().version_hex;
+            let signed_transaction_before_witness_section = format!(
+                "{}{}{}{}{}{}{}",
+                n_version_hex,
+                segwit_marker,
+                flag,
+                inputs_count_hex,
+                inputs_section,
+                outputs_count_hex,
+                concated_outputs
+            );
+            println!("OUTPUTS: {:#?}", concated_outputs);
+            let unsigned_transaction = format!(
+                "{}{}{}{}{}{}",
+                n_version_hex,
+                inputs_count_hex,
+                inputs_section,
+                outputs_count_hex,
+                concated_outputs,
+                transaction_to_sign.locktime
+            );
+            println!("------------------------------------------");
+            println!("UNSIGNED: {}", unsigned_transaction);
+            println!("------------------------------------------");
+            unsigned_transaction
         }
         fn get_signed_transaction(
-        transaction_to_sign: &SegwitTransaction,
-        signature_scripts: &SignatureScripts,
-        wifs: &Wifs
+            transaction_to_sign: &SegwitTransaction,
+            signature_scripts: &SignatureScripts,
+            wifs: &Wifs,
         ) -> String {
-        let n_version_hex = transaction_to_sign.get_parts().version_hex;
-        let inputs_section = vec![0; signature_scripts.len()]
-            .iter()
-            .enumerate()
-            .map(|(index, _)| {
-                let input = &transaction_to_sign.inputs[index];
-                let raw_input = &transaction_to_sign.get_parts().inputs[index];
-                let public_key = get_public_key_from_wif(&wifs[&(index as u64)]);
-                let public_key_hash = get_public_key_hash_from_public_key(&public_key);
-                let public_key_hash_length = get_byte_length_of_hex(&public_key_hash);
-                let public_key_length = get_byte_length_of_hex(&public_key);
-                let public_key_with_length = format!("{}{}", 
-                    public_key_length,
-                    public_key,
-                );
-                let public_key_hash_with_length = format!("{}{}", 
-                    public_key_hash_length,
-                    public_key_hash,
-                );
-                if bitcoin_address::is_legacy(&input.address) {
-                    let signature = &signature_scripts[&(index as u64)];
-                    let signature_length = get_byte_length_of_hex(signature);
-                    let script_sig_with_length = format!("{}{}", 
-                                                 signature_length, 
-                                                 signature
-                    );
-                    let signature_and_public_key = format!("{}{}", script_sig_with_length, public_key_with_length);
-                    let signature_and_public_key_length= get_byte_length_of_hex(&signature_and_public_key);
-                    let script_sig_with_length = format!("{}{}", signature_and_public_key_length, signature_and_public_key);
-                    let a = format!(
-                        "{}{}{}{}",
-                        // TODO: extract this
-                        // segwit uses little endian
-                        convert_big_endian_hex_to_little_endian(&raw_input.previous_transaction_hash_hex),
-                        raw_input.previous_transaction_output_index_hex,
-                        script_sig_with_length,
-                        raw_input.sequence_hex
-                    );
-                            println!("T: {}", a);
-                    a
-                } else if bitcoin_address::is_segwit_native(&input.address) {
-                    let a = format!(
-                        "{}{}{}{}",
-                        // TODO: extract this
-                        // segwit uses little endian
-                        convert_big_endian_hex_to_little_endian(&raw_input.previous_transaction_hash_hex),
-                        raw_input.previous_transaction_output_index_hex,
-                        "00",
-                        raw_input.sequence_hex,
-                    );
-                            println!("T: {}", a);
-                    a
-                } else if bitcoin_address::is_p2sh(&input.address) {
-                    if bitcoin_address::is_nested_segwit(&input.address) {
-                        let redeem_script = format!("{}{}", OP_0, public_key_hash_with_length);
-                        let redeem_script_length = get_byte_length_of_hex(&redeem_script);
-                        let script = format!("{}{}", redeem_script_length, redeem_script);
-                        let script_length = get_byte_length_of_hex(&script);
-                        let script_with_length = format!("{}{}", script_length, script);
+            let n_version_hex = transaction_to_sign.get_parts().version_hex;
+            let inputs_section = vec![0; signature_scripts.len()]
+                .iter()
+                .enumerate()
+                .map(|(index, _)| {
+                    let input = &transaction_to_sign.inputs[index];
+                    let raw_input = &transaction_to_sign.get_parts().inputs[index];
+                    let public_key = get_public_key_from_wif(&wifs[&(index as u64)]);
+                    let public_key_hash = get_public_key_hash_from_public_key(&public_key);
+                    let public_key_hash_length = get_byte_length_of_hex(&public_key_hash);
+                    let public_key_length = get_byte_length_of_hex(&public_key);
+                    let public_key_with_length = format!("{}{}", public_key_length, public_key,);
+                    let public_key_hash_with_length =
+                        format!("{}{}", public_key_hash_length, public_key_hash,);
+                    if bitcoin_address::is_legacy(&input.address) {
+                        let signature = &signature_scripts[&(index as u64)];
+                        let signature_length = get_byte_length_of_hex(signature);
+                        let script_sig_with_length = format!("{}{}", signature_length, signature);
+                        let signature_and_public_key =
+                            format!("{}{}", script_sig_with_length, public_key_with_length);
+                        let signature_and_public_key_length =
+                            get_byte_length_of_hex(&signature_and_public_key);
+                        let script_sig_with_length = format!(
+                            "{}{}",
+                            signature_and_public_key_length, signature_and_public_key
+                        );
                         let a = format!(
                             "{}{}{}{}",
                             // TODO: extract this
                             // segwit uses little endian
-                            convert_big_endian_hex_to_little_endian(&raw_input.previous_transaction_hash_hex),
+                            convert_big_endian_hex_to_little_endian(
+                                &raw_input.previous_transaction_hash_hex
+                            ),
                             raw_input.previous_transaction_output_index_hex,
-                            script_with_length,
+                            script_sig_with_length,
+                            raw_input.sequence_hex
+                        );
+                        println!("T: {}", a);
+                        a
+                    } else if bitcoin_address::is_segwit_native(&input.address) {
+                        let a = format!(
+                            "{}{}{}{}",
+                            // TODO: extract this
+                            // segwit uses little endian
+                            convert_big_endian_hex_to_little_endian(
+                                &raw_input.previous_transaction_hash_hex
+                            ),
+                            raw_input.previous_transaction_output_index_hex,
+                            "00",
                             raw_input.sequence_hex,
                         );
-                            println!("T: {}", a);
+                        println!("T: {}", a);
                         a
+                    } else if bitcoin_address::is_p2sh(&input.address) {
+                        if bitcoin_address::is_nested_segwit(&input.address) {
+                            let redeem_script = format!("{}{}", OP_0, public_key_hash_with_length);
+                            let redeem_script_length = get_byte_length_of_hex(&redeem_script);
+                            let script = format!("{}{}", redeem_script_length, redeem_script);
+                            let script_length = get_byte_length_of_hex(&script);
+                            let script_with_length = format!("{}{}", script_length, script);
+                            let a = format!(
+                                "{}{}{}{}",
+                                // TODO: extract this
+                                // segwit uses little endian
+                                convert_big_endian_hex_to_little_endian(
+                                    &raw_input.previous_transaction_hash_hex
+                                ),
+                                raw_input.previous_transaction_output_index_hex,
+                                script_with_length,
+                                raw_input.sequence_hex,
+                            );
+                            println!("T: {}", a);
+                            a
+                        } else {
+                            todo!();
+                        }
                     } else {
                         todo!();
                     }
-                } else {
-                        todo!();
-                }
-        }).collect::<Vec<String>>().join("");
-        let inputs_count_hex = convert_decimal_to_hexadecimal(transaction_to_sign.inputs.len() as u64, false, Some(1));
-        println!("INPUTS : {}", inputs_section);
-        let concated_outputs = transaction_to_sign
-            .get_parts()
-            .outputs
-            .iter()
-            .map(|raw_output| {
-                let script_pub_key_hex = &raw_output.script_pub_key_hex;
-                format!(
-                    "{}{}{}",
-                    raw_output.amount_hex,
-                    get_byte_length_of_hex(&script_pub_key_hex),
-                    &script_pub_key_hex
-                )
-            })
-            .collect::<Vec<String>>()
-            .join("");
-        let outputs_count_hex = convert_decimal_to_hexadecimal(transaction_to_sign.outputs.len() as u64, false, Some(1));
-    let segwit_marker = "00"; // TODO: Don't hardcode
-    let flag = "01"; // TODO: Don't hardcode
-        let signed_transaction_before_witness_section = format!("{}{}{}{}{}{}{}", n_version_hex, segwit_marker, flag, inputs_count_hex, inputs_section, outputs_count_hex, concated_outputs);
-        println!(
-            "signed_transaction_before_witness_section: {:#?}",
-            signed_transaction_before_witness_section
-        );
-        let witness_section = 
+                })
+                .collect::<Vec<String>>()
+                .join("");
+            let inputs_count_hex = convert_decimal_to_hexadecimal(
+                transaction_to_sign.inputs.len() as u64,
+                false,
+                Some(1),
+            );
+            println!("INPUTS : {}", inputs_section);
+            let concated_outputs = transaction_to_sign
+                .get_parts()
+                .outputs
+                .iter()
+                .map(|raw_output| {
+                    let script_pub_key_hex = &raw_output.script_pub_key_hex;
+                    format!(
+                        "{}{}{}",
+                        raw_output.amount_hex,
+                        get_byte_length_of_hex(&script_pub_key_hex),
+                        &script_pub_key_hex
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join("");
+            let outputs_count_hex = convert_decimal_to_hexadecimal(
+                transaction_to_sign.outputs.len() as u64,
+                false,
+                Some(1),
+            );
+            let segwit_marker = "00"; // TODO: Don't hardcode
+            let flag = "01"; // TODO: Don't hardcode
+            let signed_transaction_before_witness_section = format!(
+                "{}{}{}{}{}{}{}",
+                n_version_hex,
+                segwit_marker,
+                flag,
+                inputs_count_hex,
+                inputs_section,
+                outputs_count_hex,
+                concated_outputs
+            );
+            println!(
+                "signed_transaction_before_witness_section: {:#?}",
+                signed_transaction_before_witness_section
+            );
             // this is so we can loop through the hash items sorted by key
-            vec![0; signature_scripts.len()]
-            .iter()
-            .enumerate()
-            .map(|(index, _)| {
-                println!("{}", index);
-                let input = &transaction_to_sign.inputs[index];
-                let is_input_legacy = bitcoin_address::is_legacy(&input.address);
-                let raw_input = &transaction_to_sign.get_parts().inputs[index];
-                let public_key = get_public_key_from_wif(&wifs[&(index as u64)]);
-                let public_key_length = get_byte_length_of_hex(&public_key);
-                let public_key_with_length = format!("{}{}", 
-                    public_key_length,
-                    public_key,
-                );
-                if is_input_legacy {
-                    "00".to_string()
-                } else {
-                    let signature = &signature_scripts[&(index as u64)];
-                    let signature_length = get_byte_length_of_hex(signature);
-                    let script_sig_with_length = format!("{}{}", 
-                                                 signature_length, 
-                                                 signature
-                    );
-                    let signature_and_public_key = format!("{}{}", script_sig_with_length, public_key_with_length);
-                    let signature_and_public_key_length= get_byte_length_of_hex(&signature_and_public_key);
-                    let script_sig_with_length = format!("{}{}", signature_and_public_key_length, signature_and_public_key);
-                    let items_count_hex = convert_decimal_to_hexadecimal(2, false, Some(1));
-                    format!("{}{}{}{}{}", items_count_hex,signature_length, signature, public_key_length, public_key)
-                }
-            })
-            .collect::<Vec<String>>()
-            .join("");
-        println!("witness_section: {}", witness_section);
-        let signature = format!("{}{}{}", signed_transaction_before_witness_section, witness_section, transaction_to_sign.locktime);
-        signature
+            let witness_section = vec![0; signature_scripts.len()]
+                .iter()
+                .enumerate()
+                .map(|(index, _)| {
+                    println!("{}", index);
+                    let input = &transaction_to_sign.inputs[index];
+                    let is_input_legacy = bitcoin_address::is_legacy(&input.address);
+                    let raw_input = &transaction_to_sign.get_parts().inputs[index];
+                    let public_key = get_public_key_from_wif(&wifs[&(index as u64)]);
+                    let public_key_length = get_byte_length_of_hex(&public_key);
+                    let public_key_with_length = format!("{}{}", public_key_length, public_key,);
+                    if is_input_legacy {
+                        "00".to_string()
+                    } else {
+                        let signature = &signature_scripts[&(index as u64)];
+                        let signature_length = get_byte_length_of_hex(signature);
+                        let script_sig_with_length = format!("{}{}", signature_length, signature);
+                        let signature_and_public_key =
+                            format!("{}{}", script_sig_with_length, public_key_with_length);
+                        let signature_and_public_key_length =
+                            get_byte_length_of_hex(&signature_and_public_key);
+                        let script_sig_with_length = format!(
+                            "{}{}",
+                            signature_and_public_key_length, signature_and_public_key
+                        );
+                        let items_count_hex = convert_decimal_to_hexadecimal(2, false, Some(1));
+                        format!(
+                            "{}{}{}{}{}",
+                            items_count_hex,
+                            signature_length,
+                            signature,
+                            public_key_length,
+                            public_key
+                        )
+                    }
+                })
+                .collect::<Vec<String>>()
+                .join("");
+            println!("witness_section: {}", witness_section);
+            let signature = format!(
+                "{}{}{}",
+                signed_transaction_before_witness_section,
+                witness_section,
+                transaction_to_sign.locktime
+            );
+            signature
         }
         let unsigned = get_unsigned_transaction(&transaction_to_sign, &signature_scripts, &wifs);
         let signature = get_signed_transaction(&transaction_to_sign, &signature_scripts, &wifs);
         println!("------------------------------------------");
-        println!(
-            "UNSIGNED: {}",
-       unsigned 
-        );
+        println!("UNSIGNED: {}", unsigned);
         println!("------------------------------------------");
         println!("------------------------------------------");
-        println!(
-            "SIGNED: {}",
-        signature 
-        );
+        println!("SIGNED: {}", signature);
         println!("------------------------------------------");
     }
     //
@@ -851,9 +911,7 @@ pub fn sign_segwit_transaction(transaction_to_sign: &SegwitTransaction, wifs: Ha
         let prevouts = transaction_to_sign
             .inputs
             .iter()
-            .map(|input| {
-                get_outpoint_for_input(&input)
-            })
+            .map(|input| get_outpoint_for_input(&input))
             .collect::<Vec<String>>()
             .join("");
         println!("prevout: {}", prevouts);
@@ -899,14 +957,15 @@ pub fn sign_segwit_transaction(transaction_to_sign: &SegwitTransaction, wifs: Ha
                 // let public_key_hash_with_length = format!("{}{}", pub_key_length, public_key_hash);
                 // let redeem_script= format!("{}{}", "00", public_key_hash_with_length);
                 // redeem_script
-
             } else {
                 println!(".......{}:", input_to_sign.script_pub_key_hex_of_vout);
-                todo!("Not sure what to do for this script pub key of vout: {}", input_to_sign.script_pub_key_hex_of_vout);
+                todo!(
+                    "Not sure what to do for this script pub key of vout: {}",
+                    input_to_sign.script_pub_key_hex_of_vout
+                );
             }
-
         } else if bitcoin_address::is_segwit_native(&address_of_input) {
-                println!("IS SEGWIT NATIVE");
+            println!("IS SEGWIT NATIVE");
             if is_script_pub_key_a_p2wpkh(&input_to_sign.script_pub_key_hex_of_vout) {
                 println!("IS P2WPKH");
                 // get_output_script_sig_for_p2sh(&public_key_hash)
@@ -917,7 +976,10 @@ pub fn sign_segwit_transaction(transaction_to_sign: &SegwitTransaction, wifs: Ha
                 get_output_script_sig_for_p2pkh(public_key_hash.clone())
             } else {
                 println!(".......{}:", input_to_sign.script_pub_key_hex_of_vout);
-                todo!("Not sure what to do for this script pub key of vout: {}", input_to_sign.script_pub_key_hex_of_vout);
+                todo!(
+                    "Not sure what to do for this script pub key of vout: {}",
+                    input_to_sign.script_pub_key_hex_of_vout
+                );
             }
             // get_output_script_sig_for_p2pkh(public_key_hash)
         } else {
@@ -981,34 +1043,34 @@ pub fn sign_segwit_transaction(transaction_to_sign: &SegwitTransaction, wifs: Ha
             locktime,
             sighash_type_hex_in_little_endian
         );
-    let serialized_signature = double_sha256_and_sign_hex(&sighash_all_preimage, &wif);
+        let serialized_signature = double_sha256_and_sign_hex(&sighash_all_preimage, &wif);
 
-
-//         // TODO: REMOVE!!
-//         if bitcoin_address::is_segwit_native(&input_to_sign.address) {
-//             let sighash_all_preimage_from_article = "0200000099197e88ff743aff3e453e3a7b745abd31937ccbd56f96a179266eba786833e682a7d5bb59fc957ff7f737ca0b8be713c705d6173783ad5edb067819bed70be89cb872539fbe1bc0b9c5562195095f3f35e6e13919259956c6263c9bd53b20b7010000001976a914594c2e3da92d1904f7e7c856220f8cae5efb556488ac5424000000000000fffffffff3ae23c3fd63a2e0479888f95c7a8ab221b20add6ac819e9d8953edd1a0cd9240000000001000000";
-//         assert_eq!(sighash_all_preimage, sighash_all_preimage_from_article);
-//         } else if bitcoin_address::is_nested_segwit(&input_to_sign.address) {
-//             let sighash_all_preimage_from_article = "0200000099197e88ff743aff3e453e3a7b745abd31937ccbd56f96a179266eba786833e682a7d5bb59fc957ff7f737ca0b8be713c705d6173783ad5edb067819bed70be88012f1ec8aa9a63cf8b200c25ddae2dece42a2495cc473c1758972cfcd84d904010000001976a9146a721dcca372f3c17b2c649b2ba61aa0fda98a9188ac1199f40000000000fffffffff3ae23c3fd63a2e0479888f95c7a8ab221b20add6ac819e9d8953edd1a0cd9240000000001000000";
-//             assert_eq!(sighash_all_preimage, sighash_all_preimage_from_article);
-//         } else {
-//             todo!()
-//         }
-//     let serialized_signature = if bitcoin_address::is_segwit_native(&input_to_sign.address) {
-//         "3045022100f8dac321b0429798df2952d086e763dd5b374d031c7f400d92370ae3c5f57afd0220531207b28b1b137573941c7b3cf5384a3658ef5fc238d26150d8f75b2bcc61e7".to_string()
-//     } else {
-//         // put other here
-//         "304402204ebf033caf3a1a210623e98b49acb41db2220c531843106d5c50736b144b15aa02201a006be1ebc2ffef0927d4458e3bb5e41e5abc7e44fc5ceb920049b46f879711".to_string()
-//     };
-// 
-
+        //         // TODO: REMOVE!!
+        //         if bitcoin_address::is_segwit_native(&input_to_sign.address) {
+        //             let sighash_all_preimage_from_article = "0200000099197e88ff743aff3e453e3a7b745abd31937ccbd56f96a179266eba786833e682a7d5bb59fc957ff7f737ca0b8be713c705d6173783ad5edb067819bed70be89cb872539fbe1bc0b9c5562195095f3f35e6e13919259956c6263c9bd53b20b7010000001976a914594c2e3da92d1904f7e7c856220f8cae5efb556488ac5424000000000000fffffffff3ae23c3fd63a2e0479888f95c7a8ab221b20add6ac819e9d8953edd1a0cd9240000000001000000";
+        //         assert_eq!(sighash_all_preimage, sighash_all_preimage_from_article);
+        //         } else if bitcoin_address::is_nested_segwit(&input_to_sign.address) {
+        //             let sighash_all_preimage_from_article = "0200000099197e88ff743aff3e453e3a7b745abd31937ccbd56f96a179266eba786833e682a7d5bb59fc957ff7f737ca0b8be713c705d6173783ad5edb067819bed70be88012f1ec8aa9a63cf8b200c25ddae2dece42a2495cc473c1758972cfcd84d904010000001976a9146a721dcca372f3c17b2c649b2ba61aa0fda98a9188ac1199f40000000000fffffffff3ae23c3fd63a2e0479888f95c7a8ab221b20add6ac819e9d8953edd1a0cd9240000000001000000";
+        //             assert_eq!(sighash_all_preimage, sighash_all_preimage_from_article);
+        //         } else {
+        //             todo!()
+        //         }
+        //     let serialized_signature = if bitcoin_address::is_segwit_native(&input_to_sign.address) {
+        //         "3045022100f8dac321b0429798df2952d086e763dd5b374d031c7f400d92370ae3c5f57afd0220531207b28b1b137573941c7b3cf5384a3658ef5fc238d26150d8f75b2bcc61e7".to_string()
+        //     } else {
+        //         // put other here
+        //         "304402204ebf033caf3a1a210623e98b49acb41db2220c531843106d5c50736b144b15aa02201a006be1ebc2ffef0927d4458e3bb5e41e5abc7e44fc5ceb920049b46f879711".to_string()
+        //     };
+        //
 
         // this should be calculated
         let sighash_type_hex_of_1_byte =
             convert_decimal_to_hexadecimal(sighash_type, false, Some(1));
         let sighash_type_to_append_to_signature_hex = sighash_type_hex_of_1_byte;
-        let signature_with_sighash_type_appended =
-            format!("{}{}", serialized_signature, sighash_type_to_append_to_signature_hex);
+        let signature_with_sighash_type_appended = format!(
+            "{}{}",
+            serialized_signature, sighash_type_to_append_to_signature_hex
+        );
         println!(
             "signature_witth_sighash_appeneded: {}",
             signature_with_sighash_type_appended
@@ -1051,7 +1113,6 @@ fn sign_p2pkh_transaction(
         signature_scripts.insert(index as u64, signature_script);
     }
 
-
     let signed_raw_transaction =
         signature_scripts
             .iter()
@@ -1074,7 +1135,6 @@ fn double_sha256_and_sign_hex(hex_msg_to_hash_and_sign: &String, wif: &String) -
     // let msg = Message::from_hashed_data::<sha256::Hash>(msg.as_bytes());
     // println!("newest one {}", msg.to_string());
 
-
     // let transaction_double_sha_256 = sha256::Hash::hash(sighash_all_preimage.as_bytes());
     // println!("PREIMAGE DOUBLE NEW WAY!! {}", transaction_double_sha_256);
     // let transaction_double_sha_256 = double_sha256(&sighash_all_preimage);
@@ -1082,8 +1142,8 @@ fn double_sha256_and_sign_hex(hex_msg_to_hash_and_sign: &String, wif: &String) -
 
     let secp = Secp256k1::new();
     // let msg = Message::from_slice(&decode_hex(&transaction_double_sha_256).unwrap()).unwrap();
-    
-    // TRY THIS: 
+
+    // TRY THIS:
     // let msg = sha256::Hash::hash(msg);
     // let msg = Message::from_slice(&msg)?;
     // let seckey = SecretKey::from_slice(&seckey)?;
@@ -1103,7 +1163,6 @@ fn double_sha256_and_sign_hex(hex_msg_to_hash_and_sign: &String, wif: &String) -
     let pk = PublicKey::from_secret_key(&secp, &secret_key);
     assert!(secp.verify_ecdsa(&msg, &sig, &pk).is_ok());
     serialized_signature.to_string()
-
 }
 fn get_signiture_for_legacy_input_at_index(
     transaction_to_sign: &Transaction,
@@ -1128,7 +1187,11 @@ fn get_signiture_for_legacy_input_at_index(
             .replace_script_sig_hex_at_index(&script_pub_key_of_spending_vout, &vout_index_to_sign),
     };
     let unsigned_raw_transaction_hex_with_script_pub_key_inserted =
-        unsigned_raw_transaction_with_pub_key_of_spending_vout.get_raw_string(true, true, should_address_be_in_little_endian);
+        unsigned_raw_transaction_with_pub_key_of_spending_vout.get_raw_string(
+            true,
+            true,
+            should_address_be_in_little_endian,
+        );
 
     // append sighash_all
     // Before signing, the transaction has a hash type constant temporarily appended. For a regular transaction, this is SIGHASH_ALL (0x00000001). After signing, this hash type is removed from the end of the transaction and appended to the scriptSig.
@@ -1137,14 +1200,13 @@ fn get_signiture_for_legacy_input_at_index(
     let sighash_type_hex_of_4_bytes = convert_decimal_to_hexadecimal(sighash_type, false, Some(4));
     let sighash_type_hex_in_little_endian =
         convert_big_endian_hex_to_little_endian(&sighash_type_hex_of_4_bytes);
-    
+
     let sighash_all_preimage = format!(
         "{}{}",
         unsigned_raw_transaction_hex_with_script_pub_key_inserted,
         sighash_type_hex_in_little_endian
     );
     println!("pre image!! {}", sighash_all_preimage);
-
 
     println!("wif!! {}", wif);
     let public_key_hex = get_public_key_from_wif(&wif);
@@ -1153,22 +1215,23 @@ fn get_signiture_for_legacy_input_at_index(
 
     println!();
     println!("serialized sig mine: {}", serialized_signature);
-    
 
     // REMOVE THIS!
-//     let serialized_signature_from_article = "304402200da2c4d8f2f44a8154fe127fe5bbe93be492aa589870fe77eb537681bc29c8ec02201eee7504e37db2ef27fa29afda46b6c331cd1a651bb6fa5fd85dcf51ac01567a";
-//     let serialized_signature = serialized_signature_from_article;
-//     let sighash_all_preimage_from_article = "0200000003ed204affc7519dfce341db0569687569d12b1520a91a9824531c038ad62aa9d1010000001976a914b780d54c6b03b053916333b50a213d566bbedd1388acffffffff9cb872539fbe1bc0b9c5562195095f3f35e6e13919259956c6263c9bd53b20b70100000000ffffffff8012f1ec8aa9a63cf8b200c25ddae2dece42a2495cc473c1758972cfcd84d9040100000000ffffffff01b580f50000000000160014cb61ee4568082cb59ac26bb96ec8fbe0109a4c000000000001000000";
-//     println!("PREIMAGE OR LEGACY!! {}", sighash_all_preimage);
-//     assert_eq!(sighash_all_preimage, sighash_all_preimage_from_article);
-// 
-//     println!("serialized sig from article: {}", serialized_signature);
-//     println!();
+    //     let serialized_signature_from_article = "304402200da2c4d8f2f44a8154fe127fe5bbe93be492aa589870fe77eb537681bc29c8ec02201eee7504e37db2ef27fa29afda46b6c331cd1a651bb6fa5fd85dcf51ac01567a";
+    //     let serialized_signature = serialized_signature_from_article;
+    //     let sighash_all_preimage_from_article = "0200000003ed204affc7519dfce341db0569687569d12b1520a91a9824531c038ad62aa9d1010000001976a914b780d54c6b03b053916333b50a213d566bbedd1388acffffffff9cb872539fbe1bc0b9c5562195095f3f35e6e13919259956c6263c9bd53b20b70100000000ffffffff8012f1ec8aa9a63cf8b200c25ddae2dece42a2495cc473c1758972cfcd84d9040100000000ffffffff01b580f50000000000160014cb61ee4568082cb59ac26bb96ec8fbe0109a4c000000000001000000";
+    //     println!("PREIMAGE OR LEGACY!! {}", sighash_all_preimage);
+    //     assert_eq!(sighash_all_preimage, sighash_all_preimage_from_article);
+    //
+    //     println!("serialized sig from article: {}", serialized_signature);
+    //     println!();
     // this should be calculated
     let sighash_type_hex_of_1_byte = convert_decimal_to_hexadecimal(sighash_type, false, Some(1));
     let sighash_type_to_append_to_signature_hex = sighash_type_hex_of_1_byte;
-    let signature_with_sighash_type_appended =
-        format!("{}{}", serialized_signature, sighash_type_to_append_to_signature_hex);
+    let signature_with_sighash_type_appended = format!(
+        "{}{}",
+        serialized_signature, sighash_type_to_append_to_signature_hex
+    );
 
     // let signature_with_sighash_type_appended_length = get_byte_length_of_hex(&signature_with_sighash_type_appended);
     // let public_key_length = get_byte_length_of_hex(&public_key_hex);
@@ -1179,10 +1242,7 @@ fn get_signiture_for_legacy_input_at_index(
     //     public_key_length,
     //     public_key_hex
     // );
-    let signature_script = format!(
-        "{}",
-        signature_with_sighash_type_appended,
-    );
+    let signature_script = format!("{}", signature_with_sighash_type_appended,);
     signature_script
 }
 
@@ -1302,7 +1362,7 @@ fn create_p2pkh_script_pub_key_hex_from_pub_key_hash(pub_key_hash: &String) -> S
 fn create_p2sh_script_pub_key_hex_from_sh(sh: &String) -> String {
     // TODO: Why are these the prefix and postfix for a p2pkh script?
     let script_start = format!("{}", OP_HASH160);
-    let script_end= format!("{}", OP_EQUAL);
+    let script_end = format!("{}", OP_EQUAL);
     format!("{}{}{}", script_start, sh, script_end)
 }
 fn create_p2wpkh_script_pub_key_hex_from_pub_key_hash(pub_key_hash: &String) -> String {
