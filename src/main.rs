@@ -1,7 +1,8 @@
 mod legacy_transaction;
 mod segwit_transaction;
 use segwit_transaction::{
-    sign_segwit_transaction, PayFrom as SegwitPayFrom, PayTo as SegwitPayTo, SegwitTransaction,
+    get_unsigned_segwit_transaction, sign_segwit_transaction, PayFrom as SegwitPayFrom,
+    PayTo as SegwitPayTo, SegwitTransaction,
 };
 use std::collections::HashMap;
 
@@ -158,7 +159,11 @@ fn segwit_transaction() {
 
     let transaction = SegwitTransaction::new(pay_froms.clone(), pay_tos.clone());
 
-    let signature = sign_segwit_transaction(&transaction, wifs);
+    let unsigned_transaction_hex = get_unsigned_segwit_transaction(&transaction);
+
+    let signed_transaction_hex = sign_segwit_transaction(&transaction, wifs);
+    println!("UNSIGNED SEGWIT TRANSACTION: {}", unsigned_transaction_hex);
+    println!("SIGNED SEGWIT TRANSACTION: {}", signed_transaction_hex);
 }
 fn main() {
     legacy_transaction();

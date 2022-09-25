@@ -150,13 +150,11 @@ fn get_output_script_sig_for_p2pkh(public_key_hash: String) -> String {
     create_p2pkh_script_pub_key_hex_from_pub_key_hash(&public_key_hash_to_send_to)
 }
 fn get_output_script_sig_for_p2sh(public_key_hash: &String) -> String {
-    println!("THIS IS WHERE WE ARE!");
     let length = get_byte_length_of_hex(&public_key_hash);
     // TODO: HARDCODING FOR NOW
     let sh = format!("{}{}", length, public_key_hash.to_string());
 
     let a = create_p2sh_script_pub_key_hex_from_sh(&sh);
-    println!("a: {}", a);
     a
 }
 fn get_output_script_sig_for_p2wpkh(public_key_hash: &String) -> String {
@@ -248,7 +246,6 @@ impl P2PKHTransaction {
                         amount_hex: get_output_amount(output.amount_in_sats),
                         script_pub_key_hex: if is_p2sh_address {
                             if bitcoin_address::is_nested_segwit(address) {
-                                println!("MAYBE HERE.....{}", address);
                                 let sh = get_script_hash_from_p2sh_address(address);
                                 get_output_script_sig_for_p2sh(&sh)
                             } else {
@@ -420,7 +417,6 @@ pub fn sign_p2pkh_transaction_with_one_input(
                 let (index, sig_script) = sig_script_hash;
                 acc.replace_script_sig_hex_at_index(sig_script, &(*index as usize))
             });
-    println!("{:#?}", signed_raw_transaction);
     let signed_raw_transaction_hex = signed_raw_transaction.get_raw_string();
     // assert_eq!(signed_raw_transaction_hex, "01000000025cdebc5e063f6e964ebd27897a01f6b02508a4e909a09277723e2147a097ceb7000000006b483045022100ce6013324168980f509af5691816f0701faa504058a1941c6bc160a811a8434f0220249fa92dd9ff85d1fe5bebd44557234faad535a9c98bdb6b18e915f0e93a2ac40121035504699d692533fc1ac08d0b540a7e33823a0bd039a186046bb54aa04b9d09a0fdffffffbc897fb7bcf8e95523f8811968f1b376a5eb0d0a55d84a5883f7648cfb555b47000000006b483045022100d7dab8c1c1fe324eb9d9e0a7eb9cdf7be5c86903547ee8c95db80963e597228702203e0aeb8508f036342f7a82c682a039c248f8c4f86a7c6906b507bf5c87c438a001210363980fa4e3f3fb8f52195f97b30ee11f3f2dc83edc8d5fb1e340134e82bf48ccfdffffff018e1d0200000000001976a914f8a74b2613129e4fbd174852216a4d1d1992263d88ac00000000");
     signed_raw_transaction_hex
