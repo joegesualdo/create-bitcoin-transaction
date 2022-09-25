@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[derive(Debug, Clone)]
 pub struct PayFrom {
     pub transaction: String,
@@ -11,3 +13,4 @@ pub struct PayTo {
     pub address: String,
     pub amount_in_sats: u64,
 }
+pub type Wifs = HashMap<u64, String>;

@@ -12,6 +12,7 @@ use bitcoin_hd_keys::{
     convert_wif_to_private_key, double_sha256_hex, get_public_key_hash_from_address,
     get_script_hash_from_p2sh_address,
 };
+
 const OP_0: &str = "00";
 use sha2::{Digest, Sha256};
 // Sources:
@@ -37,6 +38,8 @@ use hex_utilities::{
     convert_big_endian_hex_to_little_endian, convert_decimal_to_hexadecimal, decode_hex,
     encode_hex, get_text_for_hex,
 };
+
+use crate::types::{PayFrom, PayTo, Wifs};
 
 fn get_version(version: u8) -> String {
     if version != 1 {
@@ -173,20 +176,7 @@ fn get_lock_time() -> String {
     "00000000".to_string()
 }
 
-#[derive(Debug, Clone)]
-pub struct PayFrom {
-    pub transaction: String,
-    pub vout_index: u64,
-    pub script_pub_key_hex_of_vout: String,
-    // pub_key_hash_hex_of_receiver: String,
-}
-#[derive(Debug, Clone)]
-pub struct PayTo {
-    pub address: String,
-    pub amount_in_sats: u64,
-}
-
-pub fn get_unsigned_transaction_hex(transaction: &P2PKHTransaction) -> String {
+pub fn get_legacy_unsigned_transaction_hex(transaction: &P2PKHTransaction) -> String {
     let parts = transaction.get_parts();
     parts.get_raw_string()
 }
@@ -393,7 +383,7 @@ fn sign_segwith_transaction() {
 
 pub fn sign_p2pkh_transaction_with_one_input(
     transaction_to_sign: &P2PKHTransaction,
-    wifs: HashMap<u64, String>,
+    wifs: &Wifs,
 ) -> String {
     // Source: https://medium.com/@bitaps.com/exploring-bitcoin-signing-the-p2pkh-input-b8b4d5c4809c
     // let vout = &transaction_to_sign.inputs[vout_index_to_sign];

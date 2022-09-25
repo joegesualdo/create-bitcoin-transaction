@@ -38,8 +38,9 @@ use hex_utilities::{
     convert_big_endian_hex_to_little_endian, convert_decimal_to_hexadecimal, decode_hex,
     encode_hex, get_text_for_hex,
 };
+
+use crate::types::{PayFrom, PayTo, Wifs};
 type SignatureScripts = HashMap<u64, String>;
-type Wifs = HashMap<u64, String>;
 
 // Script types:
 // V0_P2WPKH: https://mempool.space/testnet/tx/b7203bd59b3c26c65699251939e1e6353f5f09952156c5b9c01bbe9f5372b89c
@@ -189,20 +190,6 @@ fn get_output_script_sig_for_p2wpkh(public_key_hash: &String) -> String {
 }
 fn get_lock_time() -> String {
     "00000000".to_string()
-}
-
-#[derive(Debug, Clone)]
-pub struct PayFrom {
-    pub transaction: String,
-    pub vout_index: u64,
-    pub script_pub_key_hex_of_vout: String,
-    pub address: String,          // native or wrapped,
-    pub vout_amount_in_sats: u64, // native or wrapped,
-}
-#[derive(Debug, Clone)]
-pub struct PayTo {
-    pub address: String,
-    pub amount_in_sats: u64,
 }
 
 enum Transaction {
@@ -597,7 +584,7 @@ pub fn get_unsigned_segwit_transaction(transaction_to_sign: &SegwitTransaction) 
 fn get_final_transaction_serialization(
     transaction_to_sign: &SegwitTransaction,
     signature_scripts: SignatureScripts,
-    wifs: Wifs,
+    wifs: &Wifs,
 ) -> String {
     let n_version_hex = transaction_to_sign.get_parts().version_hex;
     // We then have two new fields, the SegWit marker 0x00 and flag 0x01 , which allow nodes to identify this as a SegWit transaction:
@@ -768,10 +755,7 @@ fn get_final_transaction_serialization(
     signed_transaction_hex
 }
 
-pub fn sign_segwit_transaction(
-    transaction_to_sign: &SegwitTransaction,
-    wifs: HashMap<u64, String>,
-) -> String {
+pub fn sign_segwit_transaction(transaction_to_sign: &SegwitTransaction, wifs: &Wifs) -> String {
     // Source: https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526a
     let unsigned_raw_transaction = transaction_to_sign.get_parts();
 

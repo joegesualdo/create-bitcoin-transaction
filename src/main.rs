@@ -1,40 +1,93 @@
 mod legacy_transaction;
 mod segwit_transaction;
+mod types;
+use legacy_transaction::get_legacy_unsigned_transaction_hex;
 use segwit_transaction::{
-    get_unsigned_segwit_transaction, sign_segwit_transaction, PayFrom as SegwitPayFrom,
-    PayTo as SegwitPayTo, SegwitTransaction,
+    get_unsigned_segwit_transaction, sign_segwit_transaction, SegwitTransaction,
 };
 use std::collections::HashMap;
+use types::Wifs;
 
-use crate::legacy_transaction::{
-    get_unsigned_transaction_hex, sign_p2pkh_transaction_with_one_input, P2PKHTransaction,
-    PayFrom as LegacyPayFrom, PayTo as LegacyPayTo,
+use crate::{
+    legacy_transaction::{sign_p2pkh_transaction_with_one_input, P2PKHTransaction},
+    types::{PayFrom, PayTo},
 };
 
+fn get_unsigned_transaction_hex(inputs: &Vec<PayFrom>, outputs: &Vec<PayTo>) -> String {
+    let is_legacy_transaction = inputs
+        .iter()
+        .find(|input| !bitcoin_address::is_legacy(&input.address))
+        .is_none();
+    if is_legacy_transaction {
+        let transaction = P2PKHTransaction::new(inputs.clone(), outputs.clone());
+        let unsigned_transaction_hex = get_legacy_unsigned_transaction_hex(&transaction);
+        unsigned_transaction_hex
+    } else {
+        let transaction = SegwitTransaction::new(inputs.clone(), outputs.clone());
+
+        let unsigned_transaction_hex = get_unsigned_segwit_transaction(&transaction);
+        unsigned_transaction_hex
+    }
+}
+fn get_signed_transaction_hex(inputs: &Vec<PayFrom>, outputs: &Vec<PayTo>, wifs: &Wifs) -> String {
+    let is_legacy_transaction = inputs
+        .iter()
+        .find(|input| !bitcoin_address::is_legacy(&input.address))
+        .is_none();
+    if is_legacy_transaction {
+        let transaction = P2PKHTransaction::new(inputs.clone(), outputs.clone());
+        let signed_transaction_hex = sign_p2pkh_transaction_with_one_input(&transaction, wifs);
+        signed_transaction_hex
+    } else {
+        let transaction = SegwitTransaction::new(inputs.clone(), outputs.clone());
+
+        let signed_transaction_hex = sign_segwit_transaction(&transaction, wifs);
+        signed_transaction_hex
+    }
+}
+
 fn legacy_transaction() {
-    let pay_froms = vec![LegacyPayFrom {
+    let pay_froms = vec![PayFrom {
         transaction: "97ab2e6039c829b0feafc8e78cf7dd9b7f86d3c5cd9e4c54ff0b22ab75b0e13c".to_string(),
         vout_index: 0,
         script_pub_key_hex_of_vout: "76a914f8a74b2613129e4fbd174852216a4d1d1992263d88ac"
             .to_string(),
+        address: "n4BiHPS4kxus9TswxehsrhAwXacV9exJrm".to_string(),
+        vout_amount_in_sats: 138638,
     }];
-    let pay_tos = vec![LegacyPayTo {
+    let pay_tos = vec![PayTo {
         address: "2MuvJWP5uKxXLgUyTaTxjzSbDY6sR3H9jME".to_string(),
         amount_in_sats: 138447,
     }];
 
     let transaction = P2PKHTransaction::new(pay_froms.clone(), pay_tos.clone());
-    let unsigned_transaction_hex = get_unsigned_transaction_hex(&transaction);
+    let unsigned_transaction_hex = get_legacy_unsigned_transaction_hex(&transaction);
+    println!("UNSIGNED transaction: \n{}", unsigned_transaction_hex);
+    let unsigned_transaction_hex = get_unsigned_transaction_hex(&pay_froms, &pay_tos);
     println!("UNSIGNED transaction: \n{}", unsigned_transaction_hex);
     println!();
 
     let mut wifs: HashMap<u64, String> = HashMap::new();
+    let pay_froms = vec![PayFrom {
+        transaction: "97ab2e6039c829b0feafc8e78cf7dd9b7f86d3c5cd9e4c54ff0b22ab75b0e13c".to_string(),
+        vout_index: 0,
+        script_pub_key_hex_of_vout: "76a914f8a74b2613129e4fbd174852216a4d1d1992263d88ac"
+            .to_string(),
+        address: "n4BiHPS4kxus9TswxehsrhAwXacV9exJrm".to_string(),
+        vout_amount_in_sats: 138638,
+    }];
+    let pay_tos = vec![PayTo {
+        address: "2MuvJWP5uKxXLgUyTaTxjzSbDY6sR3H9jME".to_string(),
+        amount_in_sats: 138447,
+    }];
     wifs.insert(
         0,
         "cSYMJxgaNbRqUGecNQX8b7NcqsHT1Lm4bH4SJaL3RS1t4pEJQJFy".to_string(),
     );
-    let signed_transaction_hex = sign_p2pkh_transaction_with_one_input(&transaction, wifs);
+    let signed_transaction_hex = sign_p2pkh_transaction_with_one_input(&transaction, &wifs);
 
+    println!("Signature: \n{}", signed_transaction_hex);
+    let signed_transaction_hex = get_signed_transaction_hex(&pay_froms, &pay_tos, &wifs);
     println!("Signature: \n{}", signed_transaction_hex);
     println!();
 }
@@ -45,7 +98,7 @@ fn segwit_transaction() {
     let pay_froms = vec![
         //legacy
         // mempool: https://mempool.space/testnet/tx/d1a92ad68a031c5324981aa920152bd16975686905db41e3fc9d51c7ff4a20edj
-        SegwitPayFrom {
+        PayFrom {
             transaction: "d1a92ad68a031c5324981aa920152bd16975686905db41e3fc9d51c7ff4a20ed"
                 .to_string(),
             vout_index: 1,
@@ -56,7 +109,7 @@ fn segwit_transaction() {
         },
         // native segwit
         // mempool vout: https://mempool.space/testnet/tx/b7203bd59b3c26c65699251939e1e6353f5f09952156c5b9c01bbe9f5372b89c
-        SegwitPayFrom {
+        PayFrom {
             transaction: "b7203bd59b3c26c65699251939e1e6353f5f09952156c5b9c01bbe9f5372b89c"
                 .to_string(),
             vout_index: 1,
@@ -67,7 +120,7 @@ fn segwit_transaction() {
         },
         // //nested_segwit
         // mempool vout: https://mempool.space/testnet/tx/04d984cdcf728975c173c45c49a242cedee2da5dc200b2f83ca6a98aecf11280
-        SegwitPayFrom {
+        PayFrom {
             transaction: "04d984cdcf728975c173c45c49a242cedee2da5dc200b2f83ca6a98aecf11280"
                 .to_string(),
             vout_index: 1,
@@ -78,7 +131,7 @@ fn segwit_transaction() {
             vout_amount_in_sats: 16029969, // Placeholde as it's not needed for legacy
         },
     ];
-    let pay_tos = vec![SegwitPayTo {
+    let pay_tos = vec![PayTo {
         address: "tb1qeds7u3tgpqkttxkzdwukaj8muqgf5nqq6w05ak".to_string(),
         amount_in_sats: 16089269,
     }];
@@ -98,7 +151,7 @@ fn segwit_transaction() {
     // mine
     let pay_froms = vec![
         // legacy
-        SegwitPayFrom {
+        PayFrom {
             transaction: "c0ab3d75e01c3817e5f91a51bfd99761f92718bcd555df9d2f29255fbdf3f01b"
                 .to_string(),
             vout_index: 0,
@@ -109,7 +162,7 @@ fn segwit_transaction() {
             vout_amount_in_sats: 4000, // Placeholde as it's not needed for legacy
         },
         // bech32
-        SegwitPayFrom {
+        PayFrom {
             transaction: "7d0289e6928cf5f43197742c9d39dcc4a26aa380dd78e5eb0e13dcb7ebac9984"
                 .to_string(),
             vout_index: 0,
@@ -138,7 +191,7 @@ fn segwit_transaction() {
         //     vout_amount_in_sats: 138312, // Placeholde as it's not needed for legacy
         // },
     ];
-    let pay_tos = vec![SegwitPayTo {
+    let pay_tos = vec![PayTo {
         address: "tb1q73av5es7v0m46fzdscgpkdk0kezhlcu8qkc0tg".to_string(),
         // amount_in_sats: 138178
         amount_in_sats: 147500,
@@ -160,9 +213,13 @@ fn segwit_transaction() {
     let transaction = SegwitTransaction::new(pay_froms.clone(), pay_tos.clone());
 
     let unsigned_transaction_hex = get_unsigned_segwit_transaction(&transaction);
-
-    let signed_transaction_hex = sign_segwit_transaction(&transaction, wifs);
     println!("UNSIGNED SEGWIT TRANSACTION: {}", unsigned_transaction_hex);
+    let unsigned_transaction_hex = get_unsigned_transaction_hex(&pay_froms, &pay_tos);
+    println!("UNSIGNED SEGWIT TRANSACTION: {}", unsigned_transaction_hex);
+
+    let signed_transaction_hex = sign_segwit_transaction(&transaction, &wifs);
+    println!("SIGNED SEGWIT TRANSACTION: {}", signed_transaction_hex);
+    let signed_transaction_hex = get_signed_transaction_hex(&pay_froms, &pay_tos, &wifs);
     println!("SIGNED SEGWIT TRANSACTION: {}", signed_transaction_hex);
 }
 fn main() {
