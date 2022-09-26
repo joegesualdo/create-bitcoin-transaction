@@ -11,7 +11,8 @@ use bitcoin::{
 use bitcoin_hd_keys::{
     convert_wif_to_private_key, double_sha256_hex, get_public_key_from_wif,
     get_public_key_hash_from_address, get_public_key_hash_from_public_key,
-    get_script_hash_from_p2sh_address, get_wif_from_private_key, hash160_for_hex, sha256_hex,
+    get_script_hash_from_p2sh_address, get_tweaked_x_only_public_key_from_p2tr_address,
+    get_wif_from_private_key, hash160_for_hex, sha256_hex,
 };
 use sha2::{Digest, Sha256};
 // Sources:
@@ -51,6 +52,8 @@ type SignatureScripts = HashMap<u64, String>;
 // P2WPKH: https://wiki.trezor.io/P2WPKH
 // p2SH-PWPKH: https://bitcoincore.org/en/segwit_wallet_dev/
 //
+const OP_1: &str = "51";
+const OP_TRUE: &str = OP_1;
 const OP_HASH160: &str = "a9";
 const OP_DUP: &str = "76";
 const OP_EQUAL: &str = "87";
@@ -188,6 +191,9 @@ fn get_output_script_sig_for_p2sh(public_key_hash: &String) -> String {
 fn get_output_script_sig_for_p2wpkh(public_key_hash: &String) -> String {
     create_p2wpkh_script_pub_key_hex_from_pub_key_hash(&public_key_hash)
 }
+fn get_output_script_sig_for_p2tr(tweaked_x_only_public_key: &String) -> String {
+    create_p2tr_script_pub_key_hex_from_tweaked_x_only_public_key(&tweaked_x_only_public_key)
+}
 fn get_lock_time() -> String {
     "00000000".to_string()
 }
@@ -247,6 +253,7 @@ impl SegwitTransaction {
                     let is_legacy_address = bitcoin_address::is_legacy(address);
                     let is_p2sh_address = bitcoin_address::is_p2sh(address);
                     let is_p2wpkh_address = bitcoin_address::is_segwit_native(address);
+                    let is_taproot_address = bitcoin_address::is_taproot(address);
                     RawOutput {
                         amount_hex: get_output_amount(output.amount_in_sats),
                         script_pub_key_hex: if is_p2sh_address {
@@ -259,6 +266,10 @@ impl SegwitTransaction {
                         } else if is_p2wpkh_address {
                             let public_key_hash = get_public_key_hash_from_address(address);
                             get_output_script_sig_for_p2wpkh(&public_key_hash)
+                        } else if is_taproot_address {
+                            let tweaked_x_only_public_key =
+                                get_tweaked_x_only_public_key_from_p2tr_address(address);
+                            get_output_script_sig_for_p2tr(&tweaked_x_only_public_key)
                         } else if is_legacy_address {
                             let public_key_hash = get_public_key_hash_from_address(address);
                             get_output_script_sig_for_p2pkh(public_key_hash)
@@ -1081,6 +1092,19 @@ fn create_p2wpkh_script_pub_key_hex_from_pub_key_hash(pub_key_hash: &String) -> 
     let script_start = format!("{}", OP_0);
     let prefix = "00";
     format!("{}{}", script_start, pub_key_hash_with_length)
+}
+fn create_p2tr_script_pub_key_hex_from_tweaked_x_only_public_key(
+    tweaked_x_only_public_key: &String,
+) -> String {
+    // TODO: Why are these the prefix and postfix for a p2pkh script?
+    let tweaked_x_only_public_key_length = get_byte_length_of_hex(&tweaked_x_only_public_key);
+    let tweaked_x_only_public_key_with_length = format!(
+        "{}{}",
+        tweaked_x_only_public_key_length, tweaked_x_only_public_key
+    );
+    let script_start = format!("{}", OP_1);
+    let prefix = "00";
+    format!("{}{}", script_start, tweaked_x_only_public_key_with_length)
 }
 
 // let sighash_components = bip143::SighashComponents::new(&unsigned_tx);

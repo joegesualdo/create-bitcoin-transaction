@@ -50,40 +50,26 @@ fn main() {
     let pay_froms = vec![
         // legacy
         PayFrom {
-            transaction: "c0ab3d75e01c3817e5f91a51bfd99761f92718bcd555df9d2f29255fbdf3f01b"
+            transaction: "2d0821b1a1ee6d04c5f91b0b400ec38cf7613bdb06a5d43ce658e672ea66d081"
                 .to_string(),
-            vout_index: 0,
+            vout_index: 1,
             // Don't need because it's a segwit input
-            script_pub_key_hex_of_vout: "76a91460157ac886a0f9e039ae8a5b52e8498a44dbb27e88ac"
-                .to_string(), // without length
-            address: "mpGztuA4UCcgw1CrGihZSbKpdfXnkR3Wma".to_string(), // Placeholder for now
-            vout_amount_in_sats: 4000, // Placeholde as it's not needed for legacy
-        },
-        PayFrom {
-            transaction: "7d0289e6928cf5f43197742c9d39dcc4a26aa380dd78e5eb0e13dcb7ebac9984"
-                .to_string(),
-            vout_index: 0,
-            // Don't need because it's a segwit input
-            script_pub_key_hex_of_vout: "001471f137d67e306d77a1b76237fcc63056304b2035".to_string(), // without length
-            address: "tb1qw8cn04n7xpkh0gdhvgmle33s2ccykgp4pmupmk".to_string(), // Placeholder for now
-            vout_amount_in_sats: 147820, // Placeholde as it's not needed for legacy
+            script_pub_key_hex_of_vout: "001443400caddfaffbb17b130304349384c8ef7e6fa4".to_string(), // without length
+            address: "tb1qgdqqetwl4lamz7cnqvzrfyuyerhhumayhhprt2".to_string(), // Placeholder for now
+            vout_amount_in_sats: 30000, // Placeholde as it's not needed for legacy
         },
     ];
     let pay_tos = vec![PayTo {
-        address: "mwL7xEgwbiF9yRVJEgLsCjgzGofG1MtsTH".to_string(),
+        address: "tb1psmsr8rc6jwl47xsv4zahnt39m2peexxhxrfvprqpw86yf55rkzgq70ycww".to_string(),
         // amount_in_sats: 138178
-        amount_in_sats: 3808,
+        amount_in_sats: 29878,
     }];
     let mut wifs: HashMap<u64, String> = HashMap::new();
     wifs.insert(
         0,
-        "cTmbuD4eHeVETFYAzsiR9Lv5ceU3GRWNsMz6BQmAxrdym4aze4gS".to_string(),
+        "cSPybNQG6n1LpmxGNiWUHSSseaVfNszVjoPwo7qi4dvRE2Se825q".to_string(),
     );
 
-    wifs.insert(
-        1,
-        "cQ53CdMtSqStbHdnLozmMLGeLs2aT8hEdHRDs2xkWkhDzVwEWKL6".to_string(),
-    );
     let unsigned_transaction_hex = get_unsigned_transaction_hex(&pay_froms, &pay_tos);
     println!("UNSIGNED SEGWIT TRANSACTION: {}", unsigned_transaction_hex);
 
