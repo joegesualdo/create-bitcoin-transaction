@@ -13,7 +13,7 @@ Personal testing ground for learning and experimenting with how various bitcoin 
 > Add package to Cargo.toml file
 ```rust
 [dependencies]
-create_bitcoin_transaction = "0.1.0"
+create_bitcoin_transaction = "0.1.1"
 ```
 
 ## Usage:

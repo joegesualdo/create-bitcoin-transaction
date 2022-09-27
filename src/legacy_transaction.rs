@@ -8,7 +8,7 @@ use bitcoin::{
     secp256k1::{Message, Secp256k1, SecretKey},
     OutPoint, PrivateKey, Script, Transaction, TxIn, TxOut, Witness,
 };
-use bitcoin_hd_keys::{
+use bitcoin_utils::{
     convert_wif_to_private_key, double_sha256_hex, get_public_key_hash_from_address,
     get_script_hash_from_p2sh_address,
 };
