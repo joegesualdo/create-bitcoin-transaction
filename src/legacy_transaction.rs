@@ -15,22 +15,6 @@ use bitcoin_hd_keys::{
 
 const OP_0: &str = "00";
 use sha2::{Digest, Sha256};
-// Sources:
-// - http://www.righto.com/2014/02/bitcoins-hard-way-using-raw-bitcoin.html
-// - https://medium.com/@bitaps.com/exploring-bitcoin-signing-the-p2pkh-input-b8b4d5c4809c
-// - https://bitcoin.stackexchange.com/questions/3374/how-to-redeem-a-basic-tx
-// - https://en.bitcoin.it/wiki/Transaction
-// - https://en.bitcoin.it/wiki/Protocol_documentation
-// - https://developer.bitcoin.org/reference/transactions.html#:~:text=Bitcoin%20transactions%20are%20broadcast%20between,part%20of%20the%20consensus%20rules.
-// - https://thunderbiscuit.com/posts/transactions-legacy/
-// - https://medium.com/@ottosch/manually-creating-and-signing-a-bitcoin-transaction-87fbbfe46033
-// https://medium.com/@ottosch/manually-creating-and-signing-a-bitcoin-transaction-87fbbfe46032
-// https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526a
-// - https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526a
-//
-// Can check work here: https://bc-2.jp/tools/txeditor2.html
-//
-
 // TODO:
 // - Sign a transaction with multipl p2pkh vins, not just one
 // - Sign other types of transactions, not only p2pkh

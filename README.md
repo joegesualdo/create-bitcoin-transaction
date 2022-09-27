@@ -1,25 +1,52 @@
-⚠️  WARNING: extremley insecure and not meant for use outside experimentation ⚠️
-
 # Create Bitcoin Transaction 
 > Satiate my need to understand how the engine works, not just that it works.
 
 Personal testing ground for learning and experimenting with how various bitcoin transactions are created.
 
-⚠️  Do. Not. Use. Unless you want to expose you private keys and lose all your imaginary money ⚠️  
+---
 
-### How to use
-1. Create a transaction hex by filling in the required field in the main function
-2. Decode the resulting transaction hex using bitcoin-cli and verify: `bitcoin-cli decoderawtransaction <transaction_hex>`
-3. Sign the transaction using bitcoin-cli and get the signed transaction hex: `bitcoin-cli signrawtransactionwithwallet <transaction_hex>`
-4. Send the signed transaction hex to the network using bitcoin-cli: `bitcoin-cli sendrawtransaction <signeded_transaction_hex>`
+**⚠️ This is experimental. Please use at your own risk.⚠️**
 
-### Resources
- - http://www.righto.com/2014/02/bitcoins-hard-way-using-raw-bitcoin.html
- - https://en.bitcoin.it/wiki/Transaction
- - https://en.bitcoin.it/wiki/Protocol_documentation
- - https://developer.bitcoin.org/reference/transactions.html#:~:text=Bitcoin%20transactions%20are%20broadcast%20between,part%20of%20the%20consensus%20rules.
- - https://thunderbiscuit.com/posts/transactions-legacy/
- - https://medium.com/@ottosch/manually-creating-and-signing-a-bitcoin-transaction-87fbbfe46033
- - https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526
- - https://bc-2.jp/tools/txeditor2.html
+---
+
+## Install
+> Add package to Cargo.toml file
+```rust
+[dependencies]
+create_bitcoin_transaction = "0.1.0"
+```
+
+## Usage:
+```rust
+use create_bitcoin_transaction::{
+    get_signed_transaction_hex, get_unsigned_transaction_hex, PayFrom, PayTo, Wifs,
+};
+
+fn main() {
+    let pay_froms = vec![PayFrom {
+        transaction: "2d0821b1a1ee6d04c5f91b0b400ec38cf7613bdb06a5d43ce658e672ea66d081".to_string(),
+        vout_index: 1,
+        script_pub_key_hex_of_vout: "001443400caddfaffbb17b130304349384c8ef7e6fa4".to_string(), 
+        address: "tb1qgdqqetwl4lamz7cnqvzrfyuyerhhumayhhprt2".to_string(), 
+        vout_amount_in_sats: 30000, // 
+    }];
+    let pay_tos = vec![PayTo {
+        address: "tb1psmsr8rc6jwl47xsv4zahnt39m2peexxhxrfvprqpw86yf55rkzgq70ycww".to_string(),
+        amount_in_sats: 29878,
+    }];
+    let mut wifs: Wifs = Wifs::new();
+    wifs.insert(
+        0,
+        "cSPybNQG6n1LpmxGNiWUHSSseaVfNszVjoPwo7qi4dvRE2Se825q".to_string(),
+    );
+
+    let unsigned_transaction_hex = get_unsigned_transaction_hex(&pay_froms, &pay_tos);
+    println!("Unsigned transaction: {}", unsigned_transaction_hex);
+
+    let signed_transaction_hex = get_signed_transaction_hex(&pay_froms, &pay_tos, &wifs);
+    println!("Signed transaction: {}", signed_transaction_hex);
+}
+```
+## Resources
+To read various resources used to learn how to create and sign transactions, see the [RESOURCES.md](./RESOURCES.md)
 
