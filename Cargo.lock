@@ -54,9 +54,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin-hd-keys"
-version = "0.1.17"
+version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1b6302542959a74932bd88b42114c5d21fea42520ccf4608603aec911a4efc3"
+checksum = "1ba356b08c7cc306c66367d9872d8d22a82b24073356c4e629f2eb9b82d11f92"
 dependencies = [
  "binary-utils",
  "bitcoin",
@@ -79,9 +79,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin-utils"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fb4f76ed2bed77f3d9eee9fb2aa8266e859cc83a330a38cd0c6e67068be08ad"
+checksum = "17127bab0934ed817b9421ec0016cfa1f69dbf9e89680405caca20bc118a1277"
 dependencies = [
  "bitcoin",
  "bitcoin-address",
@@ -222,9 +222,12 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hex-utilities"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "734cd932aa5ff5d7233f5b3f84a0478e395dabe30d30741e4b13ce38a22b6007"
+checksum = "d2157a552ab12c50849f3972720483bbf2499671bc1f8a3a39084fdf1108e892"
+dependencies = [
+ "binary-utils",
+]
 
 [[package]]
 name = "hmac-sha512"
