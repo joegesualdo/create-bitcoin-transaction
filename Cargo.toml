@@ -1,6 +1,6 @@
 [package]
 name = "create-bitcoin-transaction"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Create and sign bitcoin transactions"
 license = "MIT"
