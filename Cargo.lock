@@ -78,6 +78,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitcoin-script-opcodes"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ecacecc3757538012efaae3707a2dd58b25de9074cf993ee296a75dd0c46ae04"
+
+[[package]]
 name = "bitcoin-utils"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -159,6 +165,7 @@ dependencies = [
  "bitcoin",
  "bitcoin-address",
  "bitcoin-hd-keys",
+ "bitcoin-script-opcodes",
  "bitcoin-utils",
  "hex-utilities",
  "sha2 0.10.5",

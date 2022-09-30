@@ -3,6 +3,7 @@ use create_bitcoin_transaction::{
 };
 
 fn main() {
+    let version = 2;
     let pay_froms = vec![PayFrom {
         transaction: "2d0821b1a1ee6d04c5f91b0b400ec38cf7613bdb06a5d43ce658e672ea66d081".to_string(),
         vout_index: 1,
@@ -20,9 +21,9 @@ fn main() {
         "cSPybNQG6n1LpmxGNiWUHSSseaVfNszVjoPwo7qi4dvRE2Se825q".to_string(),
     );
 
-    let unsigned_transaction_hex = get_unsigned_transaction_hex(&pay_froms, &pay_tos);
+    let unsigned_transaction_hex = get_unsigned_transaction_hex(&pay_froms, &pay_tos, version);
     println!("UNSIGNED SEGWIT TRANSACTION: {}", unsigned_transaction_hex);
 
-    let signed_transaction_hex = get_signed_transaction_hex(&pay_froms, &pay_tos, &wifs);
+    let signed_transaction_hex = get_signed_transaction_hex(&pay_froms, &pay_tos, &wifs, version);
     println!("SIGNED SEGWIT TRANSACTION: {}", signed_transaction_hex);
 }

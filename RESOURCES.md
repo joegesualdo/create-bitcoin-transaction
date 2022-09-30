@@ -19,7 +19,11 @@
 - https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526a
 - https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526a
 - https://bitcoincore.org/en/segwit_wallet_dev/
-- Source: https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526a
+- https://medium.com/@bitaps.com/exploring-bitcoin-signing-the-p2pkh-input-b8b4d5c4809c
+- https://medium.com/coinmonks/creating-and-signing-a-segwit-transaction-from-scratch-ec98577b526a
+- P2WPKH-in-P2SH: https://wiki.trezor.io/P2WPKH-in-P2S
+- P2WPKH: https://wiki.trezor.io/P2WPKH
+- p2SH-PWPKH: https://bitcoincore.org/en/segwit_wallet_dev/
 
 #### How to sign resources:
 - https://github.com/rust-bitcoin/rust-bitcoin/issues/294
