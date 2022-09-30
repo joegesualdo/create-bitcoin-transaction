@@ -21,17 +21,13 @@ pub fn get_unsigned_transaction_hex(
 ) -> String {
     let is_legacy_transaction = inputs
         .iter()
-        .find(|input| !bitcoin_address::is_legacy(&input.address))
-        .is_none();
+        .any(|input| bitcoin_address::is_legacy(&input.address));
     if is_legacy_transaction {
         let transaction = P2PKHTransaction::new(inputs.clone(), outputs.clone(), version);
-        let unsigned_transaction_hex = get_legacy_unsigned_transaction_hex(&transaction);
-        unsigned_transaction_hex
+        get_legacy_unsigned_transaction_hex(&transaction)
     } else {
         let transaction = SegwitTransaction::new(inputs.clone(), outputs.clone(), version);
-
-        let unsigned_transaction_hex = get_unsigned_segwit_transaction(&transaction);
-        unsigned_transaction_hex
+        get_unsigned_segwit_transaction(&transaction)
     }
 }
 
@@ -43,17 +39,13 @@ pub fn get_signed_transaction_hex(
 ) -> String {
     let is_legacy_transaction = inputs
         .iter()
-        .find(|input| !bitcoin_address::is_legacy(&input.address))
-        .is_none();
+        .any(|input| bitcoin_address::is_legacy(&input.address));
     if is_legacy_transaction {
         let transaction = P2PKHTransaction::new(inputs.clone(), outputs.clone(), version);
-        let signed_transaction_hex = sign_p2pkh_transaction_with_one_input(&transaction, wifs);
-        signed_transaction_hex
+        sign_p2pkh_transaction_with_one_input(&transaction, wifs)
     } else {
         let transaction = SegwitTransaction::new(inputs.clone(), outputs.clone(), version);
-
-        let signed_transaction_hex = sign_segwit_transaction(&transaction, wifs);
-        signed_transaction_hex
+        sign_segwit_transaction(&transaction, wifs)
     }
 }
 
