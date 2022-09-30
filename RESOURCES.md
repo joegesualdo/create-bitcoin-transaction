@@ -29,3 +29,8 @@
 #### Check validity 
  - https://bc-2.jp/tools/txeditor2.html
 
+#### Taproot
+ - https://medium.com/galaxy-digital-bitcoin-mining/part-2-bitcoin-p2tr-transaction-breakdown-67b5a443554b
+ - https://bitcoin.stackexchange.com/questions/115328/how-do-you-calculate-a-taproot-sighash
+ - https://en.bitcoin.it/wiki/BIP_0341
+

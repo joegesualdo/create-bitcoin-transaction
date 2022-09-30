@@ -39,9 +39,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin-address"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "715dcd97e21f2e91b5620adba67ede6a6c597ae51b21b11d3cefef490788fc16"
+checksum = "8b7d7512347ce9676af4085aab373ec687994ea7c827507a6114898114bff127"
 
 [[package]]
 name = "bitcoin-bech32"
@@ -54,9 +54,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin-hd-keys"
-version = "0.1.18"
+version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ba356b08c7cc306c66367d9872d8d22a82b24073356c4e629f2eb9b82d11f92"
+checksum = "383c7fadf7331aba4657653a375f4bed9d25afb796b6be4f51dd371f893d060c"
 dependencies = [
  "binary-utils",
  "bitcoin",
@@ -79,9 +79,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin-utils"
-version = "0.1.1"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17127bab0934ed817b9421ec0016cfa1f69dbf9e89680405caca20bc118a1277"
+checksum = "b625ffcfbf560bede46645de603a6a149379b0a201db171b4bd1dd9497d7427d"
 dependencies = [
  "bitcoin",
  "bitcoin-address",
@@ -154,7 +154,7 @@ dependencies = [
 
 [[package]]
 name = "create-bitcoin-transaction"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "bitcoin",
  "bitcoin-address",
@@ -246,9 +246,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.132"
+version = "0.2.134"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8371e4e5341c3a96db127eb2465ac681ced4c433e01dd0e938adbef26ba93ba5"
+checksum = "329c933548736bc49fd575ee68c89e8be4d260064184389a5b77517cddd99ffb"
 
 [[package]]
 name = "log"
@@ -291,9 +291,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.14.0"
+version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f7254b99e31cad77da24b08ebf628882739a608578bb1bcdfc1f9c21260d7c0"
+checksum = "e82dad04139b71a90c080c8463fe0dc7902db5192d939bd0950f074d014339e1"
 
 [[package]]
 name = "opaque-debug"
@@ -309,9 +309,9 @@ checksum = "eb9f9e6e233e5c4a35559a617bf40a4ec447db2e84c20b55a6f83167b7e57872"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.43"
+version = "1.0.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a2ca2c61bc9f3d74d2886294ab7b9853abd9c1ad903a3ac7815c58989bb7bab"
+checksum = "94e2ef8dbfc347b10c094890f778ee2e36ca9bb4262e86dc99cd217e35f3470b"
 dependencies = [
  "unicode-ident",
 ]
@@ -450,9 +450,9 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "syn"
-version = "1.0.99"
+version = "1.0.101"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58dbef6ec655055e20b86b15a8cc6d439cca19b667537ac6a1369572d151ab13"
+checksum = "e90cde112c4b9690b8cbe810cba9ddd8bc1d7472e2cae317b69e9438c1cba7d2"
 dependencies = [
  "proc-macro2",
  "quote",
