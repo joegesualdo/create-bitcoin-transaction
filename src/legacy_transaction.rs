@@ -10,10 +10,11 @@ use bitcoin::{
 };
 use bitcoin_utils::{
     convert_wif_to_private_key, double_sha256_hex, get_public_key_hash_from_address,
-    get_script_hash_from_p2sh_address,
+    get_script_hash_from_p2sh_address, get_tweaked_x_only_public_key_from_p2tr_address,
 };
 
 const OP_0: &str = "00";
+const OP_1: &str = "51";
 use sha2::{Digest, Sha256};
 // TODO:
 // - Sign a transaction with multipl p2pkh vins, not just one
@@ -26,12 +27,12 @@ use hex_utilities::{
 use crate::types::{PayFrom, PayTo, Wifs};
 
 fn get_version(version: u8) -> String {
-    if version != 1 {
+    if version > 2 {
         panic!("Version not supported")
     }
     // currently version 1
     // https://en.bitcoin.it/wiki/Transaction
-    let version = "00000001".to_string();
+    let version = convert_decimal_to_hexadecimal(version as u64, false, Some(4));
 
     let little_endian_version_hex = convert_big_endian_hex_to_little_endian(&version);
     little_endian_version_hex
@@ -132,6 +133,22 @@ fn get_output_script_length(output_script_pub_key_hex: &String) -> String {
 //
 //     create_p2sh_script_pub_key_hex_from_sh(&sh)
 // }
+fn get_output_script_sig_for_p2tr(tweaked_x_only_public_key: &String) -> String {
+    create_p2tr_script_pub_key_hex_from_tweaked_x_only_public_key(&tweaked_x_only_public_key)
+}
+fn create_p2tr_script_pub_key_hex_from_tweaked_x_only_public_key(
+    tweaked_x_only_public_key: &String,
+) -> String {
+    // TODO: Why are these the prefix and postfix for a p2pkh script?
+    let tweaked_x_only_public_key_length = get_byte_length_of_hex(&tweaked_x_only_public_key);
+    let tweaked_x_only_public_key_with_length = format!(
+        "{}{}",
+        tweaked_x_only_public_key_length, tweaked_x_only_public_key
+    );
+    let script_start = format!("{}", OP_1);
+    let prefix = "00";
+    format!("{}{}", script_start, tweaked_x_only_public_key_with_length)
+}
 fn get_output_script_sig_for_p2pkh(public_key_hash: String) -> String {
     let public_key_hash_to_send_to = public_key_hash.to_string();
     create_p2pkh_script_pub_key_hex_from_pub_key_hash(&public_key_hash_to_send_to)
@@ -177,7 +194,7 @@ impl P2PKHTransaction {
     pub fn new(inputs: Vec<PayFrom>, outputs: Vec<PayTo>) -> Self {
         P2PKHTransaction {
             // TODO: Shouldn't hardcode this
-            version: 1,
+            version: 2,
             inputs,
             outputs,
             // TODO: Shouldn't hardcode this
@@ -216,6 +233,7 @@ impl P2PKHTransaction {
                     let is_legacy_address = bitcoin_address::is_legacy(address);
                     let is_p2sh_address = bitcoin_address::is_p2sh(address);
                     let is_p2wpkh_address = bitcoin_address::is_segwit_native(address);
+                    let is_taproot_address = bitcoin_address::is_taproot(address);
                     P2PKHRawOutput {
                         amount_hex: get_output_amount(output.amount_in_sats),
                         script_pub_key_hex: if is_p2sh_address {
@@ -228,6 +246,10 @@ impl P2PKHTransaction {
                         } else if is_p2wpkh_address {
                             let public_key_hash = get_public_key_hash_from_address(address);
                             get_output_script_sig_for_p2wpkh(&public_key_hash)
+                        } else if is_taproot_address {
+                            let tweaked_x_only_public_key =
+                                get_tweaked_x_only_public_key_from_p2tr_address(address);
+                            get_output_script_sig_for_p2tr(&tweaked_x_only_public_key)
                         } else if is_legacy_address {
                             let public_key_hash = get_public_key_hash_from_address(address);
                             get_output_script_sig_for_p2pkh(public_key_hash)
